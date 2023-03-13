@@ -4,8 +4,18 @@ import { createServer } from 'http';
 import path from 'path';
 import ClientHandler from './ClientHandler';
 import GameModel from './GameModel';
+import dotenv from 'dotenv';
 
-const PORT = process.env.PORT || 3001;
+dotenv.config();
+const ENVIRONMENT_TYPE = process.env.NODE_ENV == "production"?
+  "production" :
+  "development";
+const PORT = ENVIRONMENT_TYPE == "production"?
+  process.env.PORT_PRODUCTION :
+  process.env.PORT_DEVELOPMENT;
+const CORS_CLIENT_URL = ENVIRONMENT_TYPE == "production"?
+  process.env.CLIENT_URL_PRODUCTION :
+  process.env.CLIENT_URL_DEVELOPMENT;
 const SECONDS_PER_GAME_LOOP = 0.0333;
 
 const clientHandlers = new Map<string, ClientHandler>();
@@ -16,7 +26,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'https://browser-fighting-game-client.herokuapp.com',
+    origin: CORS_CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -79,5 +89,8 @@ setInterval(() => {
 }, 1000 * SECONDS_PER_GAME_LOOP);
 
 server.listen(PORT, () => {
-  logVerbose(`Listening on *:${PORT}`);
+  logVerbose(`NODE_ENV environmental variable value: ${process.env.NODE_ENV}.`);
+  logVerbose(`Running in ${ENVIRONMENT_TYPE} mode.`);
+  logVerbose(`Listening on port ${PORT}.`);
+  logVerbose(`Allowed origin URL for client: ${CORS_CLIENT_URL}`);
 });
