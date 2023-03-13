@@ -1,0 +1,150 @@
+{
+  "name": "Character A",
+  "initialState": "idle",
+  "stats": {
+    "movementSpeed": 10,
+    "maxHealth": 100
+  },
+  "animations": [
+    {
+      "name": "idle",
+      "id": "idle",
+      "numFrames": 60,
+      "state": {
+        "transitions": {
+          "default": {
+            "destination": "idle",
+            "transitionType": "afterEnd"
+          },
+          "controls": [
+            {
+              "control": "moveLeft",
+              "destination": "left"
+            },
+            {
+              "control": "lightAttack",
+              "destination": "attackLeft"
+            }
+          ],
+          "collisions": [
+            {
+              "entityType": "hitbox",
+              "destination": "knockback"
+            }
+          ]
+        },
+        "collisions": {
+          "hurtbox": {
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "walk left",
+      "id": "left",
+      "numFrames": 4,
+      "state": {
+        "transitions": {
+          "default": {
+            "destination": "idle",
+            "transitionType": "interrupt"
+          },
+          "controls": [
+            {
+              "control": "moveLeft",
+              "destination": "left"
+            },
+            {
+              "control": "lightAttack",
+              "destination": "attackLeft"
+            }
+          ]
+        },
+        "collisions": {
+          "hurtbox": {
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        },
+        "effects": {
+            "move": {
+                "x": -1.0,
+                "y": 0
+            }
+        }
+      }
+    },
+    {
+      "name": "attack left",
+      "id": "attackLeft",
+      "numFrames": 2,
+      "state": {
+        "transitions": {
+          "default": {
+            "destination": "idle",
+            "transitionType": "afterEnd"
+          },
+          "controls": [
+            {
+              "control": "lightAttack",
+              "destination": "attackLeft"
+            }
+          ]
+        },
+        "collisions": {
+          "hurtbox": {
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          },
+          "hitbox": {
+            "rectangles": [
+              {
+                "collisionBox": {
+                  "x": -0.5,
+                  "y": 0.25,
+                  "width": 1.0,
+                  "height": 0.5
+                },                                
+                "damage": 10,
+                "knockback": -1.0
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "knocked back",
+      "id": "knockback",
+      "numFrames": 30,
+      "state": {
+        "transitions": {
+          "default": {
+            "destination": "idle",
+            "transitionType": "afterEnd"
+          }
+        }
+      }
+    }
+  ]
+}

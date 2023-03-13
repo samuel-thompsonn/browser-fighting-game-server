@@ -1,0 +1,197 @@
+{
+  "name": "characterA",
+  "initialState": "idle1",
+  "stats": {
+    "movementSpeed": 10,
+    "maxHealth": 100
+  },
+  "animations": [
+      {
+          "name": "idle",
+          "states": [
+              {
+                "id": "idle1",
+                "transitions": {
+                  "default": "idle2",
+                  "controls": [
+                    {
+                      "control": "moveLeft",
+                      "destination": "left1"
+                    },
+                    {
+                      "control": "lightAttack",
+                      "destination": "attackLeft1"
+                    }
+                  ]
+                },
+                "collisions": {
+                  "hurtbox": {
+                    "rectangles": [
+                      {
+                        "x": 0,
+                        "y": 0,
+                        "width": 1.0,
+                        "height": 1.0
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                  "id": "idle2",
+                  "transitions": {
+                      "default": "idle3",
+                      "controls": [
+                        {
+                          "control": "moveLeft",
+                          "destination": "left1"
+                        },
+                        {
+                          "control": "lightAttack",
+                          "destination": "attackLeft1"
+                        }
+                      ]
+                  }
+              },
+              {
+                  "id": "idle3",
+                  "transitions": {
+                    "default": "idle4",
+                    "controls": [
+                      {
+                        "control": "moveLeft",
+                        "destination": "left1"
+                      },
+                      {
+                        "control": "lightAttack",
+                        "destination": "attackLeft1"
+                      }
+                    ]
+                  }
+              },
+              {
+                  "id": "idle4",
+                  "transitions": {
+                      "default": "idle1",
+                      "controls": [
+                        {
+                          "control": "moveLeft",
+                          "destination": "left1"
+                        },
+                        {
+                          "control": "lightAttack",
+                          "destination": "attackLeft1"
+                        }
+                    ]
+                  }
+              }
+          ]
+      },
+      {
+          "name": "walkLeft",
+          "states": [
+              {
+                  "id": "left1",
+                  "transitions": {
+                      "default": "idle1",
+                      "controls": [{
+                          "control": "moveLeft",
+                          "destination": "left2"
+                      }]
+                  },
+                  "effects": {
+                      "move": {
+                          "x": -1.0,
+                          "y": 0
+                      }
+                  }
+              },
+              {
+                  "id": "left2",
+                  "transitions": {
+                      "default": "idle1",
+                      "controls": [{
+                          "control": "moveLeft",
+                          "destination": "left1"
+                      }]
+                  },
+                  "effects": {
+                      "move": {
+                          "x": -1.0,
+                          "y": 0
+                      }
+                  }
+              }
+          ]
+      },
+      {
+          "name": "attackLeft",
+          "states": [
+            {
+                "id": "attackLeft1",
+                "transitions": {
+                    "default": "attackLeft2"
+                },
+                "collisions": {
+                    "hurtbox": {
+                      "rectangles": [
+                          {
+                              "x": 0,
+                              "y": 0,
+                              "width": 1.0,
+                              "height": 1.0
+                          }
+                      ]
+                    },
+                    "hitbox": {
+                        "rectangles": [
+                          {
+                            "collisionBox": {
+                              "x": -0.5,
+                              "y": 0.25,
+                              "width": 1.0,
+                              "height": 0.5
+                            },                                
+                            "damage": 10,
+                            "knockback": -1.0
+                          }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "attackLeft2",
+                "transitions": {
+                    "default": "idle1"
+                },
+                "collisions": {
+                    "hurtbox": {
+                      "rectangles": [
+                          {
+                              "x": 0,
+                              "y": 0,
+                              "width": 1.0,
+                              "height": 1.0
+                          }
+                      ]
+                    },
+                    "hitbox": {
+                      "rectangles": [
+                        {
+                          "collisionBox": {
+                            "x": -0.5,
+                            "y": 0.25,
+                            "width": 1.0,
+                            "height": 0.5
+                          },                                
+                          "damage": 10,
+                          "knockback": -1.0
+                        }
+                      ]
+                    }
+                }
+            }
+          ]
+      }
+  ]
+}
