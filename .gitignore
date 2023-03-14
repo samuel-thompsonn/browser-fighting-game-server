@@ -4,3 +4,4 @@ build
 .eslintrc.json
 .vscode
 export
+ssh
