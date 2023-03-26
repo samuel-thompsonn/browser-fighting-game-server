@@ -52,7 +52,6 @@ export default class GameModel implements GameInternal {
 
   createCharacter(): string {
     const characterID = `${this.#characterCounter}`;
-    // const ReferenceNewCharacter = new Character(characterA, { x: 100, y: 50 }, characterID);
     const newCharacter = SimpleCharacterFileReader.readCharacterFile(characterASimple, characterID);
     this.#characterListeners.forEach((listener) => {
       newCharacter.subscribe(listener);
@@ -69,30 +68,6 @@ export default class GameModel implements GameInternal {
       listener.handleCharacterDeleted(characterID);
     });
     console.log(`There are now ${this.#characters.size} characters.`); // eslint-disable-line
-  }
-
-  moveCharacterLeft(characterID: string) {
-    const targetCharacter = this.#characters.get(characterID);
-    if (!targetCharacter) {
-      return;
-    }
-    const prevPosition = targetCharacter.getPosition();
-    targetCharacter.setPosition({
-      x: prevPosition.x - 5,
-      y: prevPosition.y,
-    });
-  }
-
-  moveCharacterRight(characterID: string) {
-    const targetCharacter = this.#characters.get(characterID);
-    if (!targetCharacter) {
-      return;
-    }
-    const prevPosition = targetCharacter.getPosition();
-    targetCharacter.setPosition({
-      x: prevPosition.x + 5,
-      y: prevPosition.y,
-    });
   }
 
   updateCharacterControls(characterID: string, controlsChange: ControlsChange) {
