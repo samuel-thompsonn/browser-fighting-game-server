@@ -24,11 +24,10 @@ export default class InteractionEffectFactory {
       }
     });
     if (effectClassName) {
-      // effectClasses is an es6 module which exports all classes of effect.
+      // interactionEffectClasses is an es6 module which exports all classes of effect.
       // So it has a property for each such class. Then we access property
-      // effectClassName, which is itself an es6 module. So then we take
-      // its default export, which is a class definition, and take that class
-      // definition's constructor and call it.
+      // effectClassName, which is itself an es6 module. We take
+      // its default export, which is a class definition, and call it constructor.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const effectClass = (<any>interactionEffectClasses)[effectClassName]
         .default.prototype.constructor;

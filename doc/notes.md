@@ -153,3 +153,138 @@ So who stores this map?
   client listener) and the part that lets you read the controls (accessible
   from the character). When a client disconnects, the controller knows,
   and it clears its controls.
+
+## 3/13/2023
+
+What is there to work on to make the game better?
+- Make the character feet be on a reasonable position relative to the stage
+- Make the whole game larger on-screen so I don't have to squint at it
+- Nicer CSS etc around the whole thing
+- Make the background dark
+- Make it so that only two players can be in
+- Give some kind of loading screen or message for when the server is not reachable
+- Health bars with win condition and ability to proceed to next round.
+- More attacks, to add some kind of interesting strategic thought
+- Simplify character files / character definitions / implementation to ensure things don't get jank
+- Allow jumping and ducking, gravity-based movement (maybe without acceleration?)
+- Require two players to start the match, ask for players to mark as ready
+- Give information to animations such that character position can be slightly changed during them
+  - Example: frame 1 has offset of (x, y), or maybe entering frame 1 literally moves the character (x, y)
+  - This is to fix the issue where centering the sprite during animation makes things look unnatural
+
+Now I can sort through these to separate between client and server side, and prioritize them.
+
+Front end:
+- Fix character position on stage (make coordinates make sense with stage)
+- Improve page style
+- Dark background
+- Health bars
+- Scale canvas size to actually use the page
+- Fix the strange sprite behavior with left-facing punch
+- Put some nice way to toggle debug views like hitbox information
+
+Back end:
+- Gravity (fixed fall speed)
+- Limit room to X players (configurable)
+- Character health
+- Win condition
+- Simplify character files
+- Require X players to start the match
+- Allow animations to adjust character position/center
+- Don't allow characters out of bounds
+
+Character work:
+- Jumping and ducking
+- More moves
+- Make the hitbox align with the sprite nicely
+
+Priority queue:
+1. Dark background
+2. Character feet position
+3. Health
+4. Health bars
+
+## 3/15/2023
+
+Character health is already sent through the pipe, so the front end healthbar works EXCEPT that it draws the healthbars all in the same place, so I think I need to make a healthbar section of the UI that automatically configures the healthbars relative to each other.
+
+## 3/18/2023
+
+I am working on rescaling the characters, and the idea is this--previously I just had world space coordinates, and those were being translated directly to canvas space coordinates. So that means if a character was at position (100, 200) they actually should be drawn at (100, 200) on the canvas--of course, translations/scaling in y coordinate don't matter as long as everything is drawn at the same heigh coordinate, but scaling in x coordinate does matter because then the hitbox visualizations won't be accurate. But now I have the following spaces:
+
+- world space
+- pixel space
+
+I'm having trouble thinking about it, so I should do an example. We start out with character Ryu, who is at (-30, 0) and has height and width of 64.
+
+Really, the 'arbitrary canvas units' I'm talking about for defining the canvas should be the arbitrary units of world space, such that I'm defining the canvas to have specific dimensions in world space. That way I can just pass in world space dimensions to the canvas and it will resolve them into pixel space. That also allows me to potentially translate the canvas too, or let it move!
+
+I think in that case it would also be appropriate to make the background not depend on the canvas and instead have a fixed size in terms of the world, and just have the canvas draw the parts that are visible. I think that's a lot cleaner since it makes the background seem like a part of the world.
+
+And honestly, the camera is already translated since its top left is at (0, -84) or so instead of (0, 0). Cool, I can move forward with that.
+
+There is one important distinction, though, that makes it important to differentiate between pixel space and world space. GUI elements such as the healthbar should be defined in terms of proportion of the screen they cover rather than in terms of world space. But also, I'm considering having healthbars show up in some sort of HTML-defined GUI layer that sits on top of the canvas or next to it, so that I can use CSS layouts to define the in-game GUI.
+
+Now I have a camera that is detached in size from the game, and a canvas which allows me to draw elements based upon their in-game size and translate that to canvas (pixel space) size in an abstracted way, which is great!
+
+Next up I want to deal with the strangeness that is the hitboxes compared to the character sprites. And the fact that switching sprites throughout an animation often causes changes in the character's position. Right now I just scale all the animation frames to fit within the same box, which is really no good for the look of the game. And right now hitboxes are defined in terms of a space in which characters are assumed to be exactly 64 game units tall and wide, so that a hitbox with width 1 is 64 game units wide, which makes sense when every animation has the character being the same width but is otherwise pretty silly.
+
+So instead I would rather have the following:
+
+- Hitbox sizes and locations are defined in terms of game units (current system but scaled by 64, arbitrarily)
+- The locations for hitboxes are defined in terms of a fixed point; if a character is at x=0, y=0, and the fixed point for the sprite is at (10, 12), then the pixel at (10, 12), or the proportional amount into the sprite, will be in the game world at x=0, y=0. I could go for an example here. Additionally, that fixed point will be where a hitbox with a top right corner at (0, 0) will have its top right corner.
+
+In this case I also would need some number determining the character's actual size in game units, considering that the sprite itself should be able to scale. And that size varies from frame to frame, but it varies exactly in proportion to the number of pixels of the sprite. That need not be the case, but it just feels odd and rife with human error to manually set relative sprite size for each frame.
+
+How can I do things quick? I can definitely assign a base width or height that applies to all characters since I only have one character. And I can claim that width (we'll go with width) corresponds to a the width of the idle animation sprite. This gives me a ratio I can work with to derive the in-game size of each of the other sprites based upon their number of pixels. But in the case where animations have varying sizes, they would still have the same number of pixels, so I would be scaling them to all the same size--but that's actually okay since I just need to set a proper center/fixed point for each sprite.
+
+So with that idea decided, let's do it! The steps are:
+1. Choose a base width for Ryu, in accordance with his starting animation.
+  **64 width, which is what I originally chose.**
+2. Calculate the ratio of pixels to game units in his starting animation.
+  **49 pixels wide, so 49/64 is pixels:units**
+3. Hard-code this ratio into the visualizer, and use it to draw sprites as if they all have fixed point (0, 0).
+  **Needed to also adjust the camera and scale the background to account for increase in character size in-game**
+4. Choose fixed points for the attack animation, and hard-code them in somewhere.
+  **Starting with just attack left and adding some guesswork fixed point to get started.**
+5. Add logic to use these fixed points as an offset for drawing the sprite compared to the actual character location.
+  **It actually works quite nicely, and makes the character hitbox align well with the attack!**
+
+Next up: These white lines have been bothering me a whole lot. Why do they happen and what can I do about them? They are specifically showing up in the last two frames of the walking animations, which I believe are represented by 'left' and 'right'. It also shows up in the last frame of the idle animation on both sides.
+
+It seems to be caused by lines on the sprite sheet, which I guess makes sense. Can i tighten the sprite sheet parameters up to account for this? I bet the stride is zero right now.
+
+The sprite width is 49 and the stride is 50, so I think I can get away with thinner sprites with more stride. The actual sprite width is 43, starting at x=6 in the right facing sprite sheet. The second sprite is at x=55, third at 105, and fourth at 154. So with a stride of 49, we have:
+
+x=6, x=55, x=104, x=153. It looks like the stride is irregular, which is unfortunate, but I can correct this with my new offset feature! Except, of course, I don't actually have a way to set the offsets of individual frames in the animation--I need that, and honestly I should probably come up with some kind of abstraction of animation sprite sequences that allows this to be nicely encoded.
+
+Okay so it looks like the stride is irregular on that sprite sheet, so the best move is probably to go in and fix up the stride to make it regular. But for now we at least have gotten rid of the white lines on the right, at the expense of being forced to cut off a pixel.
+
+## 3/22/2023
+
+I spent some time today cleaning up the animations and background to look tidier. Then I got started making a group element for controlling the layout of the healthbars so I can make this into an actual game with winners. That is what I will work on in my next opportunity.
+
+## 3/24/2023
+
+I'm making the healthbar tray so HP can be visualized for multiple characters. Then I should gamify by making attacks do domage to HP and declaring a winner when one character's HP drops to 0.
+
+I've now started a new arhcitecture for the canvas--instead of passing the visualizers into the canvas, App.tsx can just pass a map of JSON character states into the canvas and the canvas can own the visualizers. This still isn't perfectly React, but I like the compromise since it means the visualizer can be very flat and essentially still just portraying data statelessly.
+
+## 3/25/2023
+
+Next thing I would like to do is truly flatten the canvas so that it draws characters as a function of character JSON--this probably involves (1) injecting a single character visualizer interface that draws characters functionally, and (2) drawing those characters functionally based on character data.
+
+I've made CharacterVisulizer an injected class to Canvas, and I've added text to the healthbar and sprite visualizer so that it is possible (if a bit ugly) to identify characters and identify which healthbar describes which character. Next I want to modify the backend (or maybe just character data?) to make the punch deal damage.
+
+I've started by just making a damage effect that does a flat 10 damage, and it works! I only have 1 attacking move, so it's okay to hard code the damage for now. Next up I should make the game react to when a character runs out of health. How should it react?
+
+From the user perspective:
+- Losing character plays a knocked-out animation
+- Text displays saying which player won
+- After a few seconds, another round begins.
+
+From a design perspective--the backend is responsible for communicating to the frontend when the round is won, and for waiting a certain amount of time before ending the game / resetting.
+
+I think in the final version this would destroy the game instance and take us to a lobby or some kind of end screen displaying results/statistics.
+
+Honestly, I don't even need the game to reset. It would probably be better to just have the game terminate entirely when the round is over. That supports the flow where we play through a game and then go back to the lobby. That said, it probably would be nicer to have the option of multiple rounds, where character positions reset between rounds. But that is not a necessary feature for gamification. 

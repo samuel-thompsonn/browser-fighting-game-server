@@ -92,7 +92,7 @@
       ]
     },
     {
-      "name": "take stun knockback when hit",
+      "name": "take stun knockback and damage when hit",
       "id": "vulnerableToHit",
       "priority": 100,
       "conditions": [
@@ -130,6 +130,16 @@
             {
               "argName": "knockback",
               "value": "knockback",
+              "valueType": "fromContext"
+            }
+          ]
+        },
+        {
+          "effectType": "damage",
+          "args": [
+            {
+              "argName": "damage",
+              "value": "damage",
               "valueType": "fromContext"
             }
           ]

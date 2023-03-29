@@ -6,5 +6,9 @@
   {
     "nickname": "knockback",
     "className": "KnockbackEffect"
+  },
+  {
+    "nickname": "damage",
+    "className": "DamageEffect"
   }
 ]
