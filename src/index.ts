@@ -19,8 +19,8 @@ const CORS_CLIENT_URL = ENVIRONMENT_TYPE == "production"?
 const SECONDS_PER_GAME_LOOP = 0.0333;
 
 const clientHandlers = new Map<string, ClientHandler>();
-const gameModel = new GameModel();
-let socketCounter = 0;
+const gameModel = new GameModel(onGameComplete);
+let clientCounter = 0;
 
 const app = express();
 const server = createServer(app);
@@ -34,14 +34,21 @@ const io = new Server(server, {
 
 const VERBOSE = true;
 
+function onGameComplete(winnerID: string) {
+  console.log(`Winner: ${winnerID}`);
+  // tell socket subscribers that the game is completed.
+  clientHandlers.forEach((clientHandler) => {
+    clientHandler.handleGameComplete(winnerID);
+  });
+}
+
 function logVerbose(logText:string) {
   if (VERBOSE) { console.log(logText); } // eslint-disable-line
 }
 
-const handleCreateCharacter = (client:ClientHandler) => {
-  const characterID = gameModel.createCharacter();
-  client.setCharacterID(characterID);
-};
+function handleCreateCharacter() {
+  return gameModel.createCharacter();
+}
 
 const handleClientDisconnect = (client: ClientHandler): void => {
   logVerbose('a user disconnected....!');
@@ -50,22 +57,21 @@ const handleClientDisconnect = (client: ClientHandler): void => {
   if (removedCharacter) { gameModel.removeCharacter(removedCharacter); }
 };
 
+// I could pass io into a client handler factory to basically
+// encapsulate all websocket behavior.
 io.on('connection', (socket) => {
   logVerbose('a user connected!');
   const newClient = new ClientHandler(
     socket,
     gameModel,
     handleClientDisconnect,
+    handleCreateCharacter
   );
-  clientHandlers.set(`${socketCounter}`, newClient);
+  clientHandlers.set(`${clientCounter}`, newClient);
   gameModel.addCharacterListener(newClient);
   // logVerbose(clientHandlers.toString());
-  socketCounter += 1;
-  socket.emit('accepted_connection');
-
-  socket.on('createCharacter', () => {
-    handleCreateCharacter(newClient);
-  });
+  clientCounter += 1;
+  newClient.acceptConnection();
 });
 
 app.use(express.static(path.resolve(__dirname, '../client/build')));

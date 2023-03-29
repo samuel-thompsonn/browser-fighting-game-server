@@ -21,22 +21,30 @@ export default class GameModel implements GameInternal {
 
   #characterCounter: number;
 
-  pendingMovement: Map<Character, Position[]>;
+  #pendingMovement: Map<Character, Position[]>;
 
   #characterListeners: Set<CharacterListener>;
 
-  constructor() {
+  #gameComplete: boolean;
+
+  #onGameComplete: (winnerID: string) => void;
+
+  constructor(
+    onGameComplete: (winnerID: string) => void 
+  ) {
     this.#characters = new Map<string, Character>();
-    this.pendingMovement = new Map<Character, Position[]>();
+    this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
     this.#characterListeners = new Set<CharacterListener>();
+    this.#onGameComplete = onGameComplete;
+    this.#gameComplete = false;
   }
 
   moveCharacter(character: Character, deltaPosition: Position): void {
-    if (!this.pendingMovement.get(character)) {
-      this.pendingMovement.set(character, []);
+    if (!this.#pendingMovement.get(character)) {
+      this.#pendingMovement.set(character, []);
     }
-    this.pendingMovement.get(character)?.push(deltaPosition);
+    this.#pendingMovement.get(character)?.push(deltaPosition);
   }
 
   addCharacterListener(listener: CharacterListener): void {
@@ -86,12 +94,12 @@ export default class GameModel implements GameInternal {
     const deltaPositions = new Map<Character, Position>();
     this.#characters.forEach((character) => {
       const positionChange = { x: 0, y: 0 };
-      this.pendingMovement.get(character)?.forEach((deltaPosition) => {
+      this.#pendingMovement.get(character)?.forEach((deltaPosition) => {
         positionChange.x += deltaPosition.x;
         positionChange.y += deltaPosition.y;
       });
       deltaPositions.set(character, positionChange);
-      this.pendingMovement.set(character, []);
+      this.#pendingMovement.set(character, []);
     });
     return deltaPositions;
   }
@@ -124,10 +132,43 @@ export default class GameModel implements GameInternal {
     });
   }
 
+  #getCurrentWinner(): Character | undefined {
+    const livingCharacters: Character[] = [];
+    const deadCharacters: Character[] = [];
+    this.#characters.forEach((character) => {
+      if (character.getCurrentHealth() > 0) {
+        livingCharacters.push(character);
+      }
+      else {
+        deadCharacters.push(character);
+      }
+    });
+    if (livingCharacters.length === 1 && deadCharacters.length > 0) {
+      return livingCharacters[0];
+      // Currently risks soft lock in case of all characters dead at once
+    }
+    return undefined;
+  }
+
+  #handleGameComplete(winner: Character): void {
+    if (!this.#gameComplete) {
+      this.#onGameComplete(winner.getCharacterID());
+    }
+    this.#gameComplete = true;
+  }
+
+  #handleEndConditions(): void {
+    const currentWinner = this.#getCurrentWinner();
+    if (currentWinner) {
+      this.#handleGameComplete(currentWinner);
+    }
+  }
+
   updateGame(elapsedSeconds: number): void {
     this.updateCharacters(elapsedSeconds);
     const deltaPositions = this.getCharacterPositionChanges();
     this.registerCollisions(deltaPositions);
     applyCharacterMovement(deltaPositions);
+    this.#handleEndConditions();
   }
 }
