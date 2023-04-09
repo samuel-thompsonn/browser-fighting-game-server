@@ -33,6 +33,7 @@ export default class ClientHandler implements CharacterListener {
         return;
       }
       this.#characterID = this.#onCreateCharacter();
+      this.#socket.emit('createdCharacter', { characterID: this.#characterID });
     });
     if (onReset) {
       this.#socket.on('resetGame', onReset);
@@ -71,6 +72,11 @@ export default class ClientHandler implements CharacterListener {
     this.#socket.emit('gameComplete', {
       winnerID: winnerID
     });
+  }
+
+  // TODO: Call this upon game reset
+  handleReset(): void {
+    this.#socket.emit('gameReset');
   }
 
   handleCharacterDeleted(characterID: string): void {

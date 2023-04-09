@@ -57,6 +57,7 @@ function handleReset() {
   clientHandlers.forEach((clientHandler) => clientHandler.clearCharacterID());
   gameModel = new GameModel(onGameComplete);
   clientHandlers.forEach((clientHandler) => gameModel.addCharacterListener(clientHandler));
+  clientHandlers.forEach((clientHandler) => clientHandler.handleReset());
   logVerbose("Reset the game!");
 }
 
