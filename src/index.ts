@@ -5,6 +5,7 @@ import path from 'path';
 import ClientHandler from './ClientHandler';
 import GameModel from './GameModel';
 import dotenv from 'dotenv';
+import { ControlsChange } from './AnimationUtil';
 
 dotenv.config();
 const ENVIRONMENT_TYPE = process.env.NODE_ENV == "production"?
@@ -19,7 +20,7 @@ const CORS_CLIENT_URL = ENVIRONMENT_TYPE == "production"?
 const SECONDS_PER_GAME_LOOP = 0.0333;
 
 const clientHandlers = new Map<string, ClientHandler>();
-const gameModel = new GameModel(onGameComplete);
+let gameModel = new GameModel(onGameComplete);
 let clientCounter = 0;
 
 const app = express();
@@ -47,11 +48,24 @@ function logVerbose(logText:string) {
 }
 
 function handleCreateCharacter() {
+  logVerbose("Received signal to create a character!");
   return gameModel.createCharacter();
 }
 
+function handleReset() {
+  clientHandlers.forEach((clientHandler) => gameModel.removeCharacterListener(clientHandler));
+  clientHandlers.forEach((clientHandler) => clientHandler.clearCharacterID());
+  gameModel = new GameModel(onGameComplete);
+  clientHandlers.forEach((clientHandler) => gameModel.addCharacterListener(clientHandler));
+  logVerbose("Reset the game!");
+}
+
+function handleClientControlsChange(characterID:string, controlsChange:ControlsChange) {
+  gameModel.updateCharacterControls(characterID, controlsChange);
+}
+
 const handleClientDisconnect = (client: ClientHandler): void => {
-  logVerbose('a user disconnected....!');
+  logVerbose('a user disconnected....');
   gameModel.removeCharacterListener(client);
   const removedCharacter = client.getCharacterID();
   if (removedCharacter) { gameModel.removeCharacter(removedCharacter); }
@@ -63,9 +77,10 @@ io.on('connection', (socket) => {
   logVerbose('a user connected!');
   const newClient = new ClientHandler(
     socket,
-    gameModel,
+    handleClientControlsChange,
     handleClientDisconnect,
-    handleCreateCharacter
+    handleCreateCharacter,
+    handleReset
   );
   clientHandlers.set(`${clientCounter}`, newClient);
   gameModel.addCharacterListener(newClient);

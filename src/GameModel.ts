@@ -29,6 +29,8 @@ export default class GameModel implements GameInternal {
 
   #onGameComplete: (winnerID: string) => void;
 
+  #id: number;
+
   constructor(
     onGameComplete: (winnerID: string) => void 
   ) {
@@ -38,6 +40,7 @@ export default class GameModel implements GameInternal {
     this.#characterListeners = new Set<CharacterListener>();
     this.#onGameComplete = onGameComplete;
     this.#gameComplete = false;
+    this.#id = Math.floor(Math.random() * 10000000);
   }
 
   moveCharacter(character: Character, deltaPosition: Position): void {
@@ -59,6 +62,7 @@ export default class GameModel implements GameInternal {
   }
 
   createCharacter(): string {
+    console.log(`Game ID: ${this.#id} | Creating new character`)
     const characterID = `${this.#characterCounter}`;
     const newCharacter = SimpleCharacterFileReader.readCharacterFile(characterASimple, characterID);
     this.#characterListeners.forEach((listener) => {

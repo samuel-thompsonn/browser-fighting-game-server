@@ -13,18 +13,19 @@ export default class ClientHandler implements CharacterListener {
 
   constructor(
     socket:Socket,
-    gameInterface:GameModel,
+    onControlsChange:(characterID:string, controlsChange:ControlsChange) => void,
     onDisconnect:(disconnector:ClientHandler) => void,
     onCreateCharacter:() => string,
+    onReset?:() => void,
   ) {
     this.#socket = socket;
     this.#onCreateCharacter = onCreateCharacter;
     this.#characterID = undefined;
 
     this.#socket.on('disconnect', () => onDisconnect(this));
-    this.#socket.on('controlsChange', (controlsChange: ControlsChange) => {
+    this.#socket.on('controlsChange', controlsChange => {
       if (this.#characterID) {
-        gameInterface.updateCharacterControls(this.#characterID, controlsChange);
+        onControlsChange(this.#characterID, controlsChange);
       }
     });
     this.#socket.on('createCharacter', () => {
@@ -33,6 +34,9 @@ export default class ClientHandler implements CharacterListener {
       }
       this.#characterID = this.#onCreateCharacter();
     });
+    if (onReset) {
+      this.#socket.on('resetGame', onReset);
+    }
   }
 
   getCharacterID(): string | undefined {
@@ -41,6 +45,10 @@ export default class ClientHandler implements CharacterListener {
 
   setCharacterID(characterID: string): void {
     this.#characterID = characterID;
+  }
+
+  clearCharacterID(): void {
+    this.#characterID = undefined;
   }
 
   handleCharacterUpdate({
