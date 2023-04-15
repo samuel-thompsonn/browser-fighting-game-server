@@ -8,7 +8,7 @@ import {
   FileCollisionItem,
   CharacterDimensions,
 } from './CharacterFileInterface';
-import { ResolvedCollisionEvent } from './CharacterDataInterfaces';
+import { CharacterStatus, ResolvedCollisionEvent } from './CharacterDataInterfaces';
 import CharacterListener from './CharacterListener';
 import { CollisionEvent } from './GameInterfaces';
 import GameInternal from './GameInternal';
@@ -136,6 +136,7 @@ export default class Character implements CharacterInternal {
       characterID: this.#characterID,
       controlsMap: this.#controlsMap,
       currentCollisions: resolvedCollisions,
+      characterStatus: this.#getCharacterStatus(),
     };
     this.#currentState.interactions?.forEach((interaction) => {
       interaction.execute(this, interactionInfo);
@@ -268,12 +269,16 @@ export default class Character implements CharacterInternal {
     // TODO: Turn the collision entities back into something that is JSON
     // serializeable. Or make a serializer either inside the CollisionEntity
     // class or without. Probably inside right?
-    listener.handleCharacterUpdate({
+    listener.handleCharacterUpdate(this.#getCharacterStatus());
+  }
+
+  #getCharacterStatus(): CharacterStatus {
+    return {
       characterID: this.#characterID,
       animationState: this.#currentState,
       position: this.getPosition(),
       healthInfo: this.#healthInfo,
       collisionInfo: this.#serializeCollisions(),
-    });
+    }
   }
 }

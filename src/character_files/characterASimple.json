@@ -269,6 +269,37 @@
           ]
         }
       ]
+    },
+    {
+      "name": "go to knocked out animation when out of health",
+      "id": "vulnerableToKnockOut",
+      "priority": 200,
+      "conditions": [
+        {
+          "conditionType": "health",
+          "args": [
+            {
+              "argName": "healthThreshold",
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "knockingOutLeft"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
     }
   ],
   "animations": [
@@ -753,6 +784,10 @@
       "state": {
         "importedInteractions": [
           {
+            "id": "vulnerableToKnockOut",
+            "priority": 100
+          },
+          {
             "id": "defaultToIdleLeft",
             "priority": 10
           }
@@ -763,6 +798,74 @@
             "transitionType": "afterEnd"
           }
         }
+      }
+    },
+    {
+      "name": "knocking out to the left",
+      "id": "knockingOutLeft",
+      "numFrames": 20,
+      "state": {
+        "importedInteractions": [],
+        "transitions": {
+          "default": {
+            "destination": "idleLeft",
+            "transitionType": "afterEnd"
+          }
+        },
+        "interactions": [
+          {
+            "name": "go to fully knocked out animation after this animation ends",
+            "id": "knockedOutAfterKnockingOutState",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "knockedOutLeft"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "fully knocked out to the left",
+      "id": "knockedOutLeft",
+      "numFrames": 15,
+      "state": {
+        "importedInteractions": [],
+        "interactions": [
+          {
+            "name": "stay in this animation state",
+            "id": "stayInKnockedOutState",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "knockedOutLeft"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     }
   ]

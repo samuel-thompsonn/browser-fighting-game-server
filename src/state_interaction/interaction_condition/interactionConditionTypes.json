@@ -6,5 +6,9 @@
   {
     "nickname": "collision",
     "className": "CollisionCondition"
+  },
+  {
+    "nickname": "health",
+    "className": "HealthCondition"
   }
 ]
