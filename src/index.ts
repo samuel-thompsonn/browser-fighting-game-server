@@ -53,11 +53,15 @@ function handleCreateCharacter() {
 }
 
 function handleReset() {
-  clientHandlers.forEach((clientHandler) => gameModel.removeCharacterListener(clientHandler));
-  clientHandlers.forEach((clientHandler) => clientHandler.clearCharacterID());
+  clientHandlers.forEach((clientHandler) => {
+    gameModel.removeCharacterListener(clientHandler);
+    clientHandler.clearCharacterID();
+    clientHandler.handleReset();
+  });
   gameModel = new GameModel(onGameComplete);
-  clientHandlers.forEach((clientHandler) => gameModel.addCharacterListener(clientHandler));
-  clientHandlers.forEach((clientHandler) => clientHandler.handleReset());
+  clientHandlers.forEach((clientHandler) => {
+    gameModel.addCharacterListener(clientHandler);
+  });
   logVerbose("Reset the game!");
 }
 
