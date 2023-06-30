@@ -1,5 +1,6 @@
 [
   "moveRight",
   "moveLeft",
-  "lightAttack"
+  "lightAttack",
+  "heavyAttack"
 ]

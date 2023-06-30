@@ -2,7 +2,7 @@
   "name": "Character A",
   "initialState": "idleLeft",
   "stats": {
-    "movementSpeed": 100,
+    "movementSpeed": 200,
     "maxHealth": 100,
     "knockbackStrength": 50
   },
@@ -271,6 +271,37 @@
       ]
     },
     {
+      "name": "heavy attack to the left when pressing heavyAttack",
+      "id": "heavyAttackLeft",
+      "priority": 30,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "heavyAttack"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "heavyAttackLeftStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "go to knocked out animation when out of health",
       "id": "vulnerableToKnockOut",
       "priority": 200,
@@ -328,6 +359,10 @@
           {
             "id": "attackLeft",
             "priority": 30
+          },
+          {
+            "id": "heavyAttackLeft",
+            "priority": 31
           }
         ],
         "interactions": [],
@@ -406,6 +441,10 @@
           {
             "id": "attackLeft",
             "priority": 30
+          },
+          {
+            "id": "heavyAttackLeft",
+            "priority": 31
           },
           {
             "id": "vulnerableToHit",
@@ -586,6 +625,156 @@
             ],
             "rectangles": [
               {
+                "x": -0.28,
+                "y": 0.25,
+                "width": 0.5,
+                "height": 0.25
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "end lag for attacking left",
+      "id": "attackLeftEndLag",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "defaultToIdleLeft",
+            "priority": 10
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "startup lag for heavy attacking left",
+      "id": "heavyAttackLeftStartup",
+      "numFrames": 4,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to heavy active attack Lfeft immediately after this ends",
+            "id": "heavyAttackLeftAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "heavyAttackLeft"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "heavy attack left",
+      "id": "heavyAttackLeft",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to heavy end lag Left immediately after this ends",
+            "id": "endLagLeftAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "heavyAttackLeftEndLag"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          },
+          {
+            "entityType": "hitbox",
+            "properties": [
+              {
+                "propertyName": "damage",
+                "propertyValue": "30"
+              },
+              {
+                "propertyName": "knockback",
+                "propertyValue": "-1.0"
+              }
+            ],
+            "rectangles": [
+              {
                 "x": -0.5,
                 "y": 0.25,
                 "width": 1.0,
@@ -597,9 +786,9 @@
       }
     },
     {
-      "name": "end lag for attacking left",
-      "id": "attackLeftEndLag",
-      "numFrames": 2,
+      "name": "end lag for heavy attacking left",
+      "id": "heavyAttackLeftEndLag",
+      "numFrames": 4,
       "state": {
         "importedInteractions": [
           {
@@ -806,12 +995,6 @@
       "numFrames": 20,
       "state": {
         "importedInteractions": [],
-        "transitions": {
-          "default": {
-            "destination": "idleLeft",
-            "transitionType": "afterEnd"
-          }
-        },
         "interactions": [
           {
             "name": "go to fully knocked out animation after this animation ends",
@@ -834,7 +1017,13 @@
               }
             ]
           }
-        ]
+        ],
+        "effects": {
+          "move": {
+              "x": 0.5,
+              "y": 0
+          }
+        }
       }
     },
     {
