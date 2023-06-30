@@ -1,0 +1,815 @@
+{
+  "name": "Character A",
+  "initialState": "idle",
+  "symmetrical": true,
+  "stats": {
+    "movementSpeed": 200,
+    "maxHealth": 100,
+    "knockbackStrength": 50
+  },
+  "interactions": [
+    {
+      "name": "default to idle left after this animation finishes",
+      "id": "defaultToIdleLeft",
+      "priority": 1,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "idleLeft"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "afterEnd"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "default to idle left if this animation is not sustained",
+      "id": "interruptToIdleLeft",
+      "priority": 1,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "idleLeft"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "default to idle right after this animation finishes",
+      "id": "defaultToIdleRight",
+      "priority": 1,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "idleRight"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "afterEnd"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "default to idle right if this animation is not sustained actively",
+      "id": "interruptToIdleRight",
+      "priority": 1,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "idleRight"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "take stun knockback and damage when hit",
+      "id": "vulnerableToHit",
+      "priority": 100,
+      "conditions": [
+        {
+          "conditionType": "collision",
+          "args": [
+            {
+              "argName": "selfEntity",
+              "value": "hurtbox"
+            },
+            {
+              "argName": "foreignEntity",
+              "value": "hitbox"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "knockback"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        },
+        {
+          "effectType": "knockback",
+          "args": [
+            {
+              "argName": "knockback",
+              "value": "knockback",
+              "valueType": "fromContext"
+            }
+          ]
+        },
+        {
+          "effectType": "damage",
+          "args": [
+            {
+              "argName": "damage",
+              "value": "damage",
+              "valueType": "fromContext"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "move right",
+      "id": "moveRight",
+      "priority": 25,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "moveRight"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "right"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "move left",
+      "id": "moveLeft",
+      "priority": 25,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "moveLeft"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "left"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "attack to the right when pressing lightAttack",
+      "id": "attackRight",
+      "priority": 30,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "lightAttack"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "attackRightStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "attack to the left when pressing lightAttack",
+      "id": "attackLeft",
+      "priority": 30,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "lightAttack"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "attackLeftStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "heavy attack to the left when pressing heavyAttack",
+      "id": "heavyAttackLeft",
+      "priority": 30,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "heavyAttack"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "heavyAttackLeftStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "go to knocked out animation when out of health",
+      "id": "vulnerableToKnockOut",
+      "priority": 200,
+      "conditions": [
+        {
+          "conditionType": "health",
+          "args": [
+            {
+              "argName": "healthThreshold",
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "knockingOutLeft"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "idle",
+      "id": "idle",
+      "numFrames": 16,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "defaultToIdle",
+            "priority": 1
+          },
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "moveEitherDirection",
+            "priority": 23
+          },
+          {
+            "id": "attack",
+            "priority": 30
+          },
+          {
+            "id": "heavyAttack",
+            "priority": 31
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "walk",
+      "id": "walk",
+      "numFrames": 10,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "interruptToIdle",
+            "priority": 10
+          },
+          {
+            "id": "move",
+            "priority": 20
+          },
+          {
+            "id": "attack",
+            "priority": 30
+          },
+          {
+            "id": "heavyAttack",
+            "priority": 31
+          },
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ],
+        "effects": {
+            "move": {
+                "x": 1.0,
+                "y": 0
+            }
+        }
+      }
+    },
+    {
+      "name": "startup lag for light attacking",
+      "id": "lightAttackStartup",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to active light attack immediately after this ends",
+            "id": "lightAttackAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "lightAttack"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "lightAttack",
+      "id": "lightAttack",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to end lag Left immediately after this ends",
+            "id": "endLagAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "lightAttackEndLag"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          },
+          {
+            "entityType": "hitbox",
+            "properties": [
+              {
+                "propertyName": "damage",
+                "propertyValue": "10"
+              },
+              {
+                "propertyName": "knockback",
+                "propertyValue": "-1.0"
+              }
+            ],
+            "rectangles": [
+              {
+                "x": -0.28,
+                "y": 0.25,
+                "width": 0.5,
+                "height": 0.25
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "end lag for attacking left",
+      "id": "lightAttackEndLag",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "defaultToIdle",
+            "priority": 10
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "startup lag for heavy attacking left",
+      "id": "heavyAttackStartup",
+      "numFrames": 4,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to heavy active attack immediately after this ends",
+            "id": "heavyAttackAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "heavyAttack"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "heavy attack",
+      "id": "heavyAttack",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to heavy end lag Left immediately after this ends",
+            "id": "endLagAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "heavyAttackEndLag"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          },
+          {
+            "entityType": "hitbox",
+            "properties": [
+              {
+                "propertyName": "damage",
+                "propertyValue": "30"
+              },
+              {
+                "propertyName": "knockback",
+                "propertyValue": "-1.0"
+              }
+            ],
+            "rectangles": [
+              {
+                "x": -0.5,
+                "y": 0.25,
+                "width": 1.0,
+                "height": 0.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "end lag for heavy attacking",
+      "id": "heavyAttackEndLag",
+      "numFrames": 4,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "defaultToIdle",
+            "priority": 10
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 1.0,
+                "height": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "knocked back",
+      "id": "knockback",
+      "numFrames": 15,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToKnockOut",
+            "priority": 100
+          },
+          {
+            "id": "defaultToIdle",
+            "priority": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "knocking out",
+      "id": "knockingOut",
+      "numFrames": 20,
+      "state": {
+        "importedInteractions": [],
+        "interactions": [
+          {
+            "name": "go to fully knocked out animation after this animation ends",
+            "id": "knockedOutAfterKnockingOutState",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "knockedOut"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "effects": {
+          "move": {
+              "x": 0.5,
+              "y": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fully knocked out",
+      "id": "knockedOut",
+      "numFrames": 15,
+      "state": {
+        "importedInteractions": [],
+        "interactions": [
+          {
+            "name": "stay in this animation state",
+            "id": "stayInKnockedOutState",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "knockedOut"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
