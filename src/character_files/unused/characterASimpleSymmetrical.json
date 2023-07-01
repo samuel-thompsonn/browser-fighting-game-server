@@ -10,7 +10,7 @@
   "interactions": [
     {
       "name": "default to idle left after this animation finishes",
-      "id": "defaultToIdleLeft",
+      "id": "defaultToIdle",
       "priority": 1,
       "conditions": [],
       "effects": [
@@ -19,7 +19,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "idleLeft"
+              "value": "idle"
             },
             {
               "argName": "resolutionType",
@@ -31,7 +31,7 @@
     },
     {
       "name": "default to idle left if this animation is not sustained",
-      "id": "interruptToIdleLeft",
+      "id": "interruptToIdle",
       "priority": 1,
       "conditions": [],
       "effects": [
@@ -40,49 +40,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "idleLeft"
-            },
-            {
-              "argName": "resolutionType",
-              "value": "interrupt"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "default to idle right after this animation finishes",
-      "id": "defaultToIdleRight",
-      "priority": 1,
-      "conditions": [],
-      "effects": [
-        {
-          "effectType": "setNextState",
-          "args": [
-            {
-              "argName": "destination",
-              "value": "idleRight"
-            },
-            {
-              "argName": "resolutionType",
-              "value": "afterEnd"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "default to idle right if this animation is not sustained actively",
-      "id": "interruptToIdleRight",
-      "priority": 1,
-      "conditions": [],
-      "effects": [
-        {
-          "effectType": "setNextState",
-          "args": [
-            {
-              "argName": "destination",
-              "value": "idleRight"
+              "value": "idle"
             },
             {
               "argName": "resolutionType",
@@ -148,7 +106,7 @@
       ]
     },
     {
-      "name": "move right",
+      "name": "turn right and move right immediately when using the right movement key",
       "id": "moveRight",
       "priority": 25,
       "conditions": [
@@ -168,18 +126,27 @@
           "args": [
             {
               "argName": "destination",
-              "value": "right"
+              "value": "move"
             },
             {
               "argName": "resolutionType",
               "value": "interrupt"
             }
           ]
+        },
+        {
+          "effectType": "setDirection",
+          "args": [
+            {
+              "argName": "direction",
+              "value": "left"
+            }
+          ]
         }
       ]
     },
     {
-      "name": "move left",
+      "name": "turn left and move left immediately when using the left movement key",
       "id": "moveLeft",
       "priority": 25,
       "conditions": [
@@ -206,12 +173,21 @@
               "value": "interrupt"
             }
           ]
+        },
+        {
+          "effectType": "setDirection",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "left"
+            }
+          ]
         }
       ]
     },
     {
-      "name": "attack to the right when pressing lightAttack",
-      "id": "attackRight",
+      "name": "attack when pressing lightAttack",
+      "id": "attack",
       "priority": 30,
       "conditions": [
         {
@@ -230,7 +206,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "attackRightStartup"
+              "value": "lightAttackStartup"
             },
             {
               "argName": "resolutionType",
@@ -241,39 +217,8 @@
       ]
     },
     {
-      "name": "attack to the left when pressing lightAttack",
-      "id": "attackLeft",
-      "priority": 30,
-      "conditions": [
-        {
-          "conditionType": "controls",
-          "args": [
-            {
-              "argName": "control",
-              "value": "lightAttack"
-            }
-          ]
-        }
-      ],
-      "effects": [
-        {
-          "effectType": "setNextState",
-          "args": [
-            {
-              "argName": "destination",
-              "value": "attackLeftStartup"
-            },
-            {
-              "argName": "resolutionType",
-              "value": "interrupt"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "heavy attack to the left when pressing heavyAttack",
-      "id": "heavyAttackLeft",
+      "name": "heavy attack when pressing heavyAttack",
+      "id": "heavyAttack",
       "priority": 30,
       "conditions": [
         {
@@ -292,7 +237,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "heavyAttackLeftStartup"
+              "value": "heavyAttackStartup"
             },
             {
               "argName": "resolutionType",
@@ -323,7 +268,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "knockingOutLeft"
+              "value": "knockingOut"
             },
             {
               "argName": "resolutionType",
@@ -350,7 +295,11 @@
             "priority": 100
           },
           {
-            "id": "moveEitherDirection",
+            "id": "moveLeft",
+            "priority": 23
+          },
+          {
+            "id": "moveRight",
             "priority": 23
           },
           {
