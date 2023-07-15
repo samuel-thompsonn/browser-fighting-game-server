@@ -14,6 +14,11 @@ export interface Position {
   y: number;
 }
 
+export enum Direction {
+  LEFT = 'left',
+  RIGHT = 'right'
+}
+
 export interface PlayerInputs {
   right: boolean;
   left: boolean;

@@ -1,4 +1,4 @@
-import { Position } from './AnimationUtil';
+import { Direction, Position } from './AnimationUtil';
 import { AnimationState, FileCollisionItem } from './CharacterFileInterface';
 import CollisionEntity from './CollisionEntity';
 
@@ -22,6 +22,7 @@ export interface CharacterStatus {
   characterID: string;
   animationState: AnimationState;
   position: Position;
+  direction: Direction;
   healthInfo: {
     health: number;
     maxHealth: number;

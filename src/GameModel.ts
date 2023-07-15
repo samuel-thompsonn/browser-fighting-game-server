@@ -2,7 +2,7 @@ import { ControlsChange, Position } from './AnimationUtil';
 import BasicCollisionChecker from './BasicCollisionChecker';
 import Character from './Character';
 import CharacterListener from './CharacterListener';
-import characterASimple from './character_files/characterASimple.json';
+import characterASimple from './character_files/characterASimpleSymmetrical.json';
 import GameInternal from './GameInternal';
 import SimpleCharacterFileReader from './SimpleCharacterFileReader';
 
@@ -32,7 +32,7 @@ export default class GameModel implements GameInternal {
   #id: number;
 
   constructor(
-    onGameComplete: (winnerID: string) => void 
+    onGameComplete: (winnerID: string) => void,
   ) {
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
@@ -62,7 +62,7 @@ export default class GameModel implements GameInternal {
   }
 
   createCharacter(): string {
-    console.log(`Game ID: ${this.#id} | Creating new character`)
+    console.log(`Game ID: ${this.#id} | Creating new character`);
     const characterID = `${this.#characterCounter}`;
     const newCharacter = SimpleCharacterFileReader.readCharacterFile(characterASimple, characterID);
     this.#characterListeners.forEach((listener) => {
@@ -142,8 +142,7 @@ export default class GameModel implements GameInternal {
     this.#characters.forEach((character) => {
       if (character.getCurrentHealth() > 0) {
         livingCharacters.push(character);
-      }
-      else {
+      } else {
         deadCharacters.push(character);
       }
     });

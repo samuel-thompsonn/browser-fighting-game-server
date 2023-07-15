@@ -2,6 +2,7 @@ import { InteractionArgumentDescription, InteractionEffectDescription } from '..
 import InteractionEffect from './InteractionEffect';
 import interactionEffectNicknames from './interactionEffectTypes.json';
 import * as interactionEffectClasses from './InteractionEffectList';
+import InteractionArgumentResolverImpl from '../InteractionArgumentResolverImpl';
 
 function getEffectArgs(
   description: InteractionEffectDescription,
@@ -31,7 +32,10 @@ export default class InteractionEffectFactory {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const effectClass = (<any>interactionEffectClasses)[effectClassName]
         .default.prototype.constructor;
-      return Reflect.construct(effectClass, [getEffectArgs(description)]);
+      return Reflect.construct(effectClass, [
+        getEffectArgs(description),
+        new InteractionArgumentResolverImpl(),
+      ]);
     }
     return undefined;
   }

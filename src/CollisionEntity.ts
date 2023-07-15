@@ -1,4 +1,5 @@
 import { CollisionProperty, CollisionRectangle, FileCollisionItem } from './CharacterFileInterface';
+import CollisionEntityBuilder from './CollisionEntityBuilder';
 
 export default class CollisionEntity {
   #collisionProperties: Map<string, string>;
@@ -27,6 +28,13 @@ export default class CollisionEntity {
 
   getEntityType(): string {
     return this.#entityType;
+  }
+
+  public getCloneBuilder(): CollisionEntityBuilder {
+    return new CollisionEntityBuilder()
+      .withCollisionProperties(this.#collisionProperties)
+      .withCollisionRectangles(this.#collisionRectangles)
+      .withEntityType(this.#entityType);
   }
 
   getJSONSerialized(): FileCollisionItem {

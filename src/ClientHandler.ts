@@ -2,7 +2,6 @@ import { Socket } from 'socket.io';
 import { ControlsChange } from './AnimationUtil';
 import { CharacterStatus } from './CharacterDataInterfaces';
 import CharacterListener from './CharacterListener';
-import GameModel from './GameModel';
 
 export default class ClientHandler implements CharacterListener {
   #socket: Socket;
@@ -23,7 +22,7 @@ export default class ClientHandler implements CharacterListener {
     this.#characterID = undefined;
 
     this.#socket.on('disconnect', () => onDisconnect(this));
-    this.#socket.on('controlsChange', controlsChange => {
+    this.#socket.on('controlsChange', (controlsChange) => {
       if (this.#characterID) {
         onControlsChange(this.#characterID, controlsChange);
       }
@@ -55,12 +54,14 @@ export default class ClientHandler implements CharacterListener {
   handleCharacterUpdate({
     characterID,
     animationState,
+    direction,
     position,
     healthInfo,
     collisionInfo,
   }: CharacterStatus): void {
     this.#socket.emit('updateCharacter', {
       id: `${characterID}`,
+      direction,
       position,
       state: animationState.id,
       healthInfo,
@@ -70,7 +71,7 @@ export default class ClientHandler implements CharacterListener {
 
   handleGameComplete(winnerID: string): void {
     this.#socket.emit('gameComplete', {
-      winnerID: winnerID
+      winnerID,
     });
   }
 
@@ -84,6 +85,6 @@ export default class ClientHandler implements CharacterListener {
   }
 
   acceptConnection(): void {
-    this.#socket.emit("accepted_connection");
+    this.#socket.emit('accepted_connection');
   }
 }

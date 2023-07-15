@@ -37,6 +37,9 @@ function resolveCollisionRectangle(
   character: Character,
   collisionRectangle: CollisionRectangle,
 ): CollisionRectangle {
+  // TODO: Apply character direction here to flip collisions when facing left.
+  //  I think this is not the ideal place for this, though, since directionality
+  //  is not inherent to the file definition--just symmetry.
   return {
     x: character.getPosition().x + (collisionRectangle.x * character.getDimensions().width),
     y: character.getPosition().y + (collisionRectangle.y * character.getDimensions().height),
@@ -55,8 +58,10 @@ function entitiesColliding(
   // of the entities! We need to convert the boxes based on the positions and
   // dimensions of the entities.
   let colliding = false;
-  firstEntity.getCollisionRectangles().forEach((firstRectangle) => {
-    secondEntity.getCollisionRectangles().forEach((secondRectangle) => {
+  const resolvedFirstEntity = firstCharacter.resolveCollisionEntity(firstEntity);
+  const resolvedSecondEntity = secondCharacter.resolveCollisionEntity(secondEntity);
+  resolvedFirstEntity.getCollisionRectangles().forEach((firstRectangle) => {
+    resolvedSecondEntity.getCollisionRectangles().forEach((secondRectangle) => {
       colliding = colliding || boxesColliding(
         resolveCollisionRectangle(firstCharacter, firstRectangle),
         resolveCollisionRectangle(secondCharacter, secondRectangle),

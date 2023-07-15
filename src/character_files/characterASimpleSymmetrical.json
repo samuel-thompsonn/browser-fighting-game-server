@@ -126,7 +126,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "move"
+              "value": "walk"
             },
             {
               "argName": "resolutionType",
@@ -139,7 +139,7 @@
           "args": [
             {
               "argName": "direction",
-              "value": "left"
+              "value": "right"
             }
           ]
         }
@@ -166,7 +166,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "left"
+              "value": "walk"
             },
             {
               "argName": "resolutionType",
@@ -178,7 +178,7 @@
           "effectType": "setDirection",
           "args": [
             {
-              "argName": "destination",
+              "argName": "direction",
               "value": "left"
             }
           ]
@@ -338,7 +338,11 @@
             "priority": 10
           },
           {
-            "id": "move",
+            "id": "moveLeft",
+            "priority": 20
+          },
+          {
+            "id": "moveRight",
             "priority": 20
           },
           {
@@ -484,7 +488,7 @@
             ],
             "rectangles": [
               {
-                "x": -0.28,
+                "x": 0.75,
                 "y": 0.25,
                 "width": 0.5,
                 "height": 0.25
@@ -634,7 +638,7 @@
             ],
             "rectangles": [
               {
-                "x": -0.5,
+                "x": 0.5,
                 "y": 0.25,
                 "width": 1.0,
                 "height": 0.5
@@ -678,7 +682,7 @@
     {
       "name": "knocked back",
       "id": "knockback",
-      "numFrames": 15,
+      "numFrames": 6,
       "state": {
         "importedInteractions": [
           {

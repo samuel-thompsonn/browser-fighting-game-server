@@ -1,5 +1,6 @@
 import {
   ControlsChange,
+  Direction,
   Position,
   TransitionInfo,
 } from './AnimationUtil';
@@ -14,12 +15,24 @@ import { CollisionEvent } from './GameInterfaces';
 import GameInternal from './GameInternal';
 import CharacterInternal from './CharacterInternal';
 import InteractionInfo from './state_interaction/InteractionInfo';
+import CollisionEntity from './CollisionEntity';
 
 function getAnimationStateID(animationName: string, orderIndex: number) {
   return `${animationName}${orderIndex + 1}`;
 }
 
 const CHARACTER_SIZE = 64;
+
+function movementDirectionToFactor(direction: Direction): number {
+  switch (direction) {
+    case Direction.LEFT:
+      return -1;
+    case Direction.RIGHT:
+      return 1;
+    default:
+      throw new Error(`No movement factor defined for direction ${direction}`);
+  }
+}
 
 export default class Character implements CharacterInternal {
   #animationStates: Map<string, AnimationState>;
@@ -29,6 +42,8 @@ export default class Character implements CharacterInternal {
   #listeners: CharacterListener[];
 
   #position: Position;
+
+  #direction: Direction;
 
   #dimensions: CharacterDimensions;
 
@@ -80,6 +95,7 @@ export default class Character implements CharacterInternal {
     this.#position = startPosition;
     this.#movementSpeed = movementSpeed;
     this.#animationStates = animationStates;
+    this.#direction = Direction.LEFT;
     const initialState = this.#animationStates.get(initialStateID);
     if (!initialState) {
       throw new Error(`Initial state ${initialStateID} not found in states map!`);
@@ -109,6 +125,10 @@ export default class Character implements CharacterInternal {
       x: this.#deltaPosition.x + deltaPosition.x,
       y: this.#deltaPosition.y + deltaPosition.y,
     };
+  }
+
+  setDirection(newDirection: Direction): void {
+    this.#direction = newDirection;
   }
 
   updateControls({ control, status }: ControlsChange): void {
@@ -152,9 +172,10 @@ export default class Character implements CharacterInternal {
     if (this.#currentState.effects) {
       if (this.#currentState.effects.move) {
         const movementAmount = this.#currentState.effects.move;
+        const movementDirectionFactor = movementDirectionToFactor(this.#direction);
         this.changePosition({
-          x: movementAmount.x * this.#movementSpeed * elapsedSeconds,
-          y: movementAmount.y * this.#movementSpeed * elapsedSeconds,
+          x: movementAmount.x * this.#movementSpeed * movementDirectionFactor * elapsedSeconds,
+          y: movementAmount.y * this.#movementSpeed * movementDirectionFactor * elapsedSeconds,
         });
       }
     }
@@ -253,10 +274,27 @@ export default class Character implements CharacterInternal {
     this.#listeners.forEach((listener) => this.#notifyListener(listener));
   }
 
+  public resolveCollisionEntity(collisionItem: CollisionEntity): CollisionEntity {
+    const newRectangles = collisionItem.getCollisionRectangles().map((rectangle) => ({
+      ...rectangle,
+      x: 1 - rectangle.x - rectangle.width,
+    }));
+    switch (this.#direction) {
+      case (Direction.RIGHT):
+        return collisionItem;
+      case (Direction.LEFT):
+        return collisionItem.getCloneBuilder().withCollisionRectangles(newRectangles).build();
+      default:
+        throw new Error(`Invalid direction ${this.#direction}`);
+    }
+  }
+
   #serializeCollisions(): FileCollisionItem[] {
     const serializedCollisions:FileCollisionItem[] = [];
     this.#currentState.collisions?.forEach((collisionEntity) => {
-      serializedCollisions.push(collisionEntity.getJSONSerialized());
+      serializedCollisions.push(
+        this.resolveCollisionEntity(collisionEntity).getJSONSerialized(),
+      );
     });
     return serializedCollisions;
   }
@@ -276,9 +314,10 @@ export default class Character implements CharacterInternal {
     return {
       characterID: this.#characterID,
       animationState: this.#currentState,
+      direction: this.#direction,
       position: this.getPosition(),
       healthInfo: this.#healthInfo,
       collisionInfo: this.#serializeCollisions(),
-    }
+    };
   }
 }

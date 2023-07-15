@@ -348,3 +348,58 @@ I've also invented the notion of knockback from context, but I haven't implement
 For direction, I could have direction be an aspect of the character state and have an effect for switching direction. This would force all animations to now have a direction, but I could make an adapter that simply appends direction to the end of animation state name in the front end.
 
 Another idea: If I want to execute a back-air, I would need to have a way to tell whether the key I'm inputting represents back- or front-facing direction. But if the jumping neutral state is symmetrical, then I can't guarantee that left or right is facing back or front. So the solution might be to add "derived controls" signals such as "forward" or "back" that can also be used as controls input even though they can't be directly inputted by the player. forward and back are really the only such controls I can think of, but that understanding could change pretty easily.
+
+## 7/1/20232
+
+What is the formula for deriving the offset + coordinates on the main sprite sheet given the offset + coordinates on the left sprite sheet? Well, the trick is that they are horizontal mirrors of each other. Thus, if the coords are (x, y) on the flipped sprite sheet, then on the unflipped sheet you go the same number of y pixels down, and the same number of x pixels left from the top right corner of the unflipped sheet.
+
+So in that case the formula for flipped -> unflipped is:
+
+```
+unflipped_x = sheet_width - flipped_x
+```
+
+Super simple! In our Ryu case, the sheet width is 1541, so the formula is just 1541 - x. But there's one more factor! In the flipped sprite sheet, you start from the right of the sprite, so you offset another stride length to the left from your start position, which you do not do in the unflipped sheet. So the final formula is:
+
+```
+unflipped_x = sheet_width - stride_length - flipped_x
+```
+
+Should I do anything about the fixed point? Yes, definitely. Should I just negate it? No, that doesn't work. So maybe I just cancel it entirely? Curiously, it looks like a fixed point of +5 instead of +24 makes this animation line up nicely with the walking animation. Why?
+
+In the animation, I'm trying to line up Ryu's shadow to stay in one place. The shadow is 5 pixels away from the left edge of the frame, and 24 from the right edge of the frame. Though it looks like I need to move the frame 1 pixel over to account for the outer edge, so now it's +4 and +24. The shadow is 4 pixels from the border on the left, and 24 pixels from the border on the right. So if I want to make these animations flippable, I need to position each so that its shadow is equivalent distance from each side of the frame.
+
+Next I'll work on implementing this flipping logic, which should also involve fixing up the sprites so that their shadows' distances from the frames are symmetrical.
+
+## 7/2/2023
+
+So now I'm coming up with the inverse, a formula for finding the image on the flipped sheet.
+
+```flipped_x = sheet_width + stride_length - unflipped_x```
+
+## 7/3/2023
+
+I've finally figured out how to make the sprites behave nicely on the front end symmetrically, so that's great. Now I am working on making the hitboxes also flip about the center axis in response to character direction.
+
+I still need to fix this issue with rendering a mirrored version of the hitbox to match the flipping of the character sprite.
+
+## 7/4/2023
+
+I don't think it was the right move to adjust hitbox mirroring on the front end when I could put it on the back end, so I'll move it there.
+
+## 7/13/2023
+
+It would be nice to have a toggle to turn off hitboxes, since that would help me check whether the hitboxes visually make sense.
+
+### 7/15/2023
+
+Finished the logic for mirroring the collisions, which means that we now have symmetry fully implemented in both hitboxes and animations. What can I do next?
+
+- DONE: Make animation tester work with symmetrical sprite sheet
+- DONE: Fix up the animation for getting knocked back
+- Make knockback from attacks take you in the correct direction / put you in the right knockback state
+- Fix up the animation for getting knocked out
+- Fix up the hitbox for heavy attack
+- Simplify file definitions of attack animations to include startup & end lag
+- Fix up the hurtbox for Ryu
+- Fix up knocked back animation to separate out the sprites more

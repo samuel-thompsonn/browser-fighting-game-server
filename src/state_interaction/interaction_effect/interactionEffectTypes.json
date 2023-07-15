@@ -10,5 +10,9 @@
   {
     "nickname": "damage",
     "className": "DamageEffect"
+  },
+  {
+    "nickname": "setDirection",
+    "className": "DirectionEffect"
   }
 ]
