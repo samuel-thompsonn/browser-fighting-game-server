@@ -146,6 +146,58 @@
       ]
     },
     {
+      "name": "begin crouching immediately when using the down key",
+      "id": "enterCrouch",
+      "priority": 25,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "moveDown"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "enteringCrouch"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "transition to crouch idle after this animation ends",
+      "id": "crouchAfterEnd",
+      "priority": 25,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "crouching"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "afterEnd"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "turn left and move left immediately when using the left movement key",
       "id": "moveLeft",
       "priority": 25,
@@ -309,6 +361,10 @@
           {
             "id": "heavyAttack",
             "priority": 31
+          },
+          {
+            "id": "enterCrouch",
+            "priority": 35
           }
         ],
         "interactions": [],
@@ -377,6 +433,180 @@
                 "y": 0
             }
         }
+      }
+    },
+    {
+      "name": "Entering crouching state",
+      "id": "enteringCrouch",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "interruptToIdle",
+            "priority": 10
+          },
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "enter crouch state if pressing down key",
+            "id": "maintainEnteringCrouch",
+            "priority": 15,
+            "conditions": [
+              {
+                "conditionType": "controls",
+                "args": [
+                  {
+                    "argName": "control",
+                    "value": "moveDown"
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "crouching"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "interrupt"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Maintaining crouching state",
+      "id": "crouching",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "continue crouching if holding the down key",
+            "id": "maintainCrouch",
+            "priority": 45,
+            "conditions": [
+              {
+                "conditionType": "controls",
+                "args": [
+                  {
+                    "argName": "control",
+                    "value": "moveDown"
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "crouching"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "interrupt"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "default to exiting crouch if not sustained",
+            "id": "exitCrouch",
+            "priority": 40,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "exitingCrouch"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "interrupt"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.315,
+                "y": 0.58,
+                "width": 0.51,
+                "height": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Exiting crouching state",
+      "id": "exitingCrouch",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "defaultToIdle",
+            "priority": 10
+          },
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -638,10 +868,16 @@
             ],
             "rectangles": [
               {
-                "x": 0.5,
+                "x": 1,
+                "y": 0,
+                "width": 0.45,
+                "height": 0.25
+              },
+              {
+                "x": 0.65,
                 "y": 0.25,
-                "width": 1.0,
-                "height": 0.5
+                "width": 0.5,
+                "height": 0.25
               }
             ]
           }

@@ -399,10 +399,10 @@ Finished the logic for mirroring the collisions, which means that we now have sy
 - DONE: Fix up the animation for getting knocked back
 - DONE: Make knockback from attacks take you in the correct direction / put you in the right knockback state
 - DONE: Fix up the animation for getting knocked out
-- Fix up the hitbox for heavy attack
+- DONE: Fix up the hitbox for heavy attack
 - Simplify file definitions of attack animations to include startup & end lag
-- Fix up the hurtbox for Ryu
-- Fix up knocked back animation to separate out the sprites more
+- DONE: Fix up the hurtbox for Ryu
+- DONE: Fix up knocked back animation to separate out the sprites more
 
 Currently I am focusing on fixing up knockback, but right now the issue is that knockback gets reversed on every hit. Why is this happening? The debugger is being kind of uncooperative.
 
@@ -417,3 +417,10 @@ Specifically it's because I'm modifying the MAP of transition effects. So what I
 ## 7/22/2023
 
 Going ahead with the fix identified in the notes from 7/16. Looks like that was the fix, and now we are good to go with knockback direction--excellent! I imagine this will need another look in the future for generalizing signals that determine transitions.
+
+Next up on my TODO list was:
+
+- Simplify file definitions of attack animations to include startup & end lag
+
+but I would like to actually add another state that might make the game more interesting--either a "low stance" state or a "blocking" state. I think the low state might be more interesting from a gameplay
+perspective because it could allow you to duck underneath a high kick.

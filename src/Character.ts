@@ -288,7 +288,6 @@ export default class Character implements CharacterInternal {
     collisionItemBuilder.withCollisionRectangles(newRectangles);
     const knockbackProperty = collisionEntity.getProperty('knockback');
     if (knockbackProperty) {
-      console.log(`Reversing knockback. Original value: ${knockbackProperty}`);
       const reversedKnockback = parseFloat(knockbackProperty) * -1;
       collisionItemBuilder.withCollisionProperty('knockback', `${reversedKnockback}`);
     }
