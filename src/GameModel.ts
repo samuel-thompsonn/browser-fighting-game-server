@@ -129,7 +129,6 @@ export default class GameModel implements GameInternal {
         if (!detectedCollision) {
           return;
         }
-        console.log(`Collision between character ${detectedCollision.firstEntity.characterID} and ${detectedCollision.secondEntity.characterID} `); // eslint-disable-line
         innerCharacter.registerCollision(detectedCollision);
         outerCharacter.registerCollision(detectedCollision);
       });

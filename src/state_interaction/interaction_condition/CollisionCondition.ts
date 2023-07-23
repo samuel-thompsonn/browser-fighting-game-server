@@ -36,6 +36,7 @@ export default class CollisionCondition extends InteractionConditionImpl {
     );
     if (targetEvent) {
       const knockbackString = targetEvent.otherEntity.entity.getProperty('knockback');
+      console.log(`applied knockback: ${knockbackString}`);
       if (knockbackString) {
         library.set('knockback', knockbackString);
       } else {

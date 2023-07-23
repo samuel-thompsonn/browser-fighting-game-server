@@ -58,10 +58,10 @@ function entitiesColliding(
   // of the entities! We need to convert the boxes based on the positions and
   // dimensions of the entities.
   let colliding = false;
-  const resolvedFirstEntity = firstCharacter.resolveCollisionEntity(firstEntity);
-  const resolvedSecondEntity = secondCharacter.resolveCollisionEntity(secondEntity);
-  resolvedFirstEntity.getCollisionRectangles().forEach((firstRectangle) => {
-    resolvedSecondEntity.getCollisionRectangles().forEach((secondRectangle) => {
+  // const resolvedFirstEntity = firstCharacter.resolveCollisionEntity(firstEntity);
+  // const resolvedSecondEntity = secondCharacter.resolveCollisionEntity(secondEntity);
+  firstEntity.getCollisionRectangles().forEach((firstRectangle) => {
+    secondEntity.getCollisionRectangles().forEach((secondRectangle) => {
       colliding = colliding || boxesColliding(
         resolveCollisionRectangle(firstCharacter, firstRectangle),
         resolveCollisionRectangle(secondCharacter, secondRectangle),

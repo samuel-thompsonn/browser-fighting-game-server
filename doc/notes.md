@@ -397,9 +397,23 @@ Finished the logic for mirroring the collisions, which means that we now have sy
 
 - DONE: Make animation tester work with symmetrical sprite sheet
 - DONE: Fix up the animation for getting knocked back
-- Make knockback from attacks take you in the correct direction / put you in the right knockback state
-- Fix up the animation for getting knocked out
+- DONE: Make knockback from attacks take you in the correct direction / put you in the right knockback state
+- DONE: Fix up the animation for getting knocked out
 - Fix up the hitbox for heavy attack
 - Simplify file definitions of attack animations to include startup & end lag
 - Fix up the hurtbox for Ryu
 - Fix up knocked back animation to separate out the sprites more
+
+Currently I am focusing on fixing up knockback, but right now the issue is that knockback gets reversed on every hit. Why is this happening? The debugger is being kind of uncooperative.
+
+## 7/16/2023
+
+Still working on tracing back the reversing of knockback. It looks like we are reversing knockback in every frame of collision. I am confused with how this reversing of knockback is persisting, though, since I don't store character collisions afterward.
+
+Actually, I think it's because I'm modifying the same knockback effect object when I'm transforming the collision entity. So I just need to make a deeper copy of the knockback effect map. Does that make sense? Basically it's a shallow vs deep copy problem.
+
+Specifically it's because I'm modifying the MAP of transition effects. So what I need to do is make the copyBuilder method use a CLONE of the properties map instead of having it use the properties map itself.
+
+## 7/22/2023
+
+Going ahead with the fix identified in the notes from 7/16. Looks like that was the fix, and now we are good to go with knockback direction--excellent! I imagine this will need another look in the future for generalizing signals that determine transitions.

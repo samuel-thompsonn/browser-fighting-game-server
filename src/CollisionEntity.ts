@@ -30,9 +30,9 @@ export default class CollisionEntity {
     return this.#entityType;
   }
 
-  public getCloneBuilder(): CollisionEntityBuilder {
+  getCloneBuilder(): CollisionEntityBuilder {
     return new CollisionEntityBuilder()
-      .withCollisionProperties(this.#collisionProperties)
+      .withCollisionProperties(new Map(this.#collisionProperties))
       .withCollisionRectangles(this.#collisionRectangles)
       .withEntityType(this.#entityType);
   }

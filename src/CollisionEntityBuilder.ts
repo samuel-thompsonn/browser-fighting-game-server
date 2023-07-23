@@ -13,6 +13,14 @@ export default class CollisionEntityBuilder {
     return this;
   }
 
+  withCollisionProperty(propertyKey: string, propertyValue: string): CollisionEntityBuilder {
+    if (this.collisionProperties === undefined) {
+      this.collisionProperties = new Map();
+    }
+    this.collisionProperties.set(propertyKey, propertyValue);
+    return this;
+  }
+
   public withCollisionRectangles(
     collisionRectangles: CollisionRectangle[],
   ): CollisionEntityBuilder {

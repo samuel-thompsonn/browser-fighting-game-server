@@ -236,8 +236,13 @@ export default class Character implements CharacterInternal {
     this.#notifyListeners();
   }
 
-  getCollisionData() {
-    return this.#currentState.collisions;
+  getCollisionData(): CollisionEntity[] {
+    if (this.#currentState.collisions) {
+      return this.#currentState.collisions.map(
+        (collisionEntity) => this.resolveCollisionEntity(collisionEntity),
+      );
+    }
+    return [];
   }
 
   #identifyEntities(collisionEvent:CollisionEvent) {
@@ -274,16 +279,24 @@ export default class Character implements CharacterInternal {
     this.#listeners.forEach((listener) => this.#notifyListener(listener));
   }
 
-  public resolveCollisionEntity(collisionItem: CollisionEntity): CollisionEntity {
-    const newRectangles = collisionItem.getCollisionRectangles().map((rectangle) => ({
+  resolveCollisionEntity(collisionEntity: CollisionEntity): CollisionEntity {
+    const collisionItemBuilder = collisionEntity.getCloneBuilder();
+    const newRectangles = collisionEntity.getCollisionRectangles().map((rectangle) => ({
       ...rectangle,
       x: 1 - rectangle.x - rectangle.width,
     }));
+    collisionItemBuilder.withCollisionRectangles(newRectangles);
+    const knockbackProperty = collisionEntity.getProperty('knockback');
+    if (knockbackProperty) {
+      console.log(`Reversing knockback. Original value: ${knockbackProperty}`);
+      const reversedKnockback = parseFloat(knockbackProperty) * -1;
+      collisionItemBuilder.withCollisionProperty('knockback', `${reversedKnockback}`);
+    }
     switch (this.#direction) {
       case (Direction.RIGHT):
-        return collisionItem;
+        return collisionEntity;
       case (Direction.LEFT):
-        return collisionItem.getCloneBuilder().withCollisionRectangles(newRectangles).build();
+        return collisionItemBuilder.build();
       default:
         throw new Error(`Invalid direction ${this.#direction}`);
     }
