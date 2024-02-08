@@ -424,3 +424,384 @@ Next up on my TODO list was:
 
 but I would like to actually add another state that might make the game more interesting--either a "low stance" state or a "blocking" state. I think the low state might be more interesting from a gameplay
 perspective because it could allow you to duck underneath a high kick.
+
+## 7/29/2023
+
+Let's consolidate the front-end into a user flow mock, then identify what components are necessary to build either locally or in the cloud to make them work. Right now I have the game screen but I'm missing the title screen, lobby selector, lobby creator, and lobby screen. So I will add some skeletons/mock-ups for each of those and link them together.
+
+I've started writing up some nicer design docs. I figure that for the lobby I would ideally use a separate API based on websocket, since I want character selections and readiness updates to be broadcast live. And there's no particular reason that should live on the same host as the game server, so a logical separation would be purely beneficial. But that leads me to want to do another feasibility study for a simple websocket API on AWS, so I will do exactly that. I don't know whether the readiness state should be persisted on DDB, but I feel like there's no reason to do so.
+
+I found this [Amazon help page](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-websocket-api.html) describing WS API gateways, and I remembered a big issue I was facing--that there is not really much I can do about storing lobby info in RAM since the gateway is serverless. I think that still might be okay though, since there is nothing pressing about these updates being real-time. The help page links to [this example code](https://serverlessrepo.aws.amazon.com/applications/arn:aws:serverlessrepo:us-east-1:729047367331:applications~simple-websockets-chat-app) which I can inspect and deploy to see if it mirrors my use-case. It's a chat app.
+
+Looking at [this summary](https://aws.amazon.com/blogs/compute/announcing-websocket-apis-in-amazon-api-gateway/) which I've certainly seen before, it looks like this app uses a DDB backend to persist client identifiers. This is an interesting approach--are the messages themselves just stored in client memory then? I'll go ahead and try it now.
+
+It looks like the tutorial uses wscat in the terminal as the frontend, so it doesn't show me how to integrate the app with the web API, but it does show a nice way to broadcast messages and interface with a backend by WS connections, so I'll give that a try and adapt it to my use case! I will want to create and understand my own serverless template for this, and that will be a separate repo.
+
+It's an AWS tutorial, so of course things are not quite working. It looks like the deployment for OnConnectFunction failed because it uses the nodejs12.x runtime when it needs to use at least the nodejs18.x runtime. Is this something I can fix by modifying the SAM script? It looks like I can, so I made a new VSC worksapce for holding this file since I will need a CDK repo for this part of the application. Let's see if bumping the Node version fixes the Lambda deployment--looks like it did! Now I can go back to messing with the API gateway.
+
+Notable that my stack will need to include Lambdas and Lambda roles for each WS interaction type. I also need to figure out how to include the API gateway and role assignment process in the CDK so that I don't have to do this manually. Is there not already an API gateway associated with this deployment? Yes, so I can delete the one I was making myself and go straight to testing.
+
+## 8/26/2023
+
+I want to continue with the lobby selection. What was I doing last time? It looks like I was following a tutorial to make a websocket API--why was I doing that?
+
+It looks like the reason was because lobby interactions should be pushed asynchronously to the client. I can probably control the lobby interactions by a DDB table to make things serverless, since a 100ms response time is perfectly acceptable. So I suppose we should design that. But first, I guess we should design the higher-level system that involves the lobby API as a part. I also can mock up some example API JSON contents for grabbing a lobby.
+
+With the time I have, I think it would be fun to try building a simple version of this API in CloudFormation so that I can get some experience in it. I can do this in a separate package. My objective here is to make an API gateway with two endpoints: createLobby and listLobbies. They will access a DDB in the backend. I think that I will need to manually provide the code for the Lambdas that connect the API gateway to the DDB, though.
+
+CloudFormation keeps nice public-facing docs such as https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-apigatewayv2-api.html so that I know what fields are available when defining a resource in the template. I'm surprised that no properties are listed as "required"!
+
+Note to self: When stuck on issues related to SSO and you're trying to run a boto3 script, use `aws configure sso`. Also note to self: I left off here: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-cli-creating-stack.html. I was trying to automate the process of uploading+testing a CloudFormation template so that I can rapidly test the ones that I create for the lobby management API.
+
+## 8/28/2023
+
+Continuing on using CloudFormation to create an API Gateway that connects to a Lambda which connects to a DynamoDB.
+
+Using AWS SAM tutorials, I've successfully created a CloudFormation stack consisting of an API Gateway writing to a DDB table through AWS Lambda. This should allow me to build out a lobby management system by plugging the API endpoints into the SPA React app. Cool! (Sam is cool & talented congrats peeps)
+
+Note to peep: You are a great programmer :)
+Thanks Annie!
+
+## 8/29/2023
+
+Continuing on the lobby management API by adapting the template. I need the following to continue:
+
+- Proper data model for the lobbies themselves in [lobby management design doc](design/lobby_management_api.md)
+- Mocked up lobby selection experience that uses all the relevant data fields from the DB model (including identifier).
+
+## 9/1/2023
+
+Adding some styling to the table on the lobby selection page. I'm following a couple guides for table styling:
+
+- general table styling: https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Styling_tables
+- table borders: https://www.w3schools.com/html/html_table_borders.asp
+
+Now that some styling has been completed, I will make stub a JS client for interfacing with my API, then rewrite the existing lobby management API endpoint to serve the expected output.
+
+## 9/2/2023
+
+What is the cleanest way for me to connect the frontend and backend deployments without coupling them? I guess it would be to attach a static domain name to my API--how do I do that? I feel like I could also add an AWS AppConfig listing the endpoint and have the deployment set a value there, but that somehow seems like it's not the recommended approach based on quick searches.
+
+I found a Stack Overflow thread saying that I can use my domain name certificate for my API gateway. Let's try it. Link: https://stackoverflow.com/questions/69043426/how-to-configure-a-custom-domain-for-httpapi-using-aws-sam
+
+I found a guide here for using a custom domain name, and I'm adapting it. https://whatibroke.com/2022/01/25/adding-a-custom-domain-name-aws-sam/
+
+It looks like I don't have permission to use subdomains for my domain name, which sucks and I should probably try grabbing another domain name that allows this. But for now I'll just use the 2nd-level domain.
+
+That first guide seems to have resulted in hanging forever. I'll try one more guide for now: https://rhuaridh.co.uk/blog/aws-sam-custom-domain.html. This tutorial made me realize that I''m using the wrong ZoneId.
+
+I used the following guides to successfully create a mapping in the CloudFormation template so that my API will always be accessible through my custom domain:
+
+- https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-domainconfiguration.html
+- https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-api-route53configuration.html
+
+So now the frontend can use a static domain to access the backend, without it changing on every deployment. Nice! I still figure the domain should be through AppConfig or something though, since the business logic doesn't care about the exact URL.
+
+Now let's connect the frontend!
+
+Also, a note: I should probably go ahead and make the websocket-based in-lobby API as a proof of concept before I finish filling out the lobby management API, so that I have a happy-path end-to-end flow.
+
+## 9/4/2023
+
+Continuing on the lobby API by developing a 'create' endpoint. Once I have that working end-to-end, I can move on to developing the proof-of-concept websocket API for in-lobby actions.
+
+I found this source which has allowed me to hook up a Lambda to a websocket API gateway powered by an AWS SAM template: https://github.com/aws-samples/simple-websockets-chat-app/blob/master/onconnect/app.js
+
+Annie also found this font used by Mozilla which looks nice and I might want to steal it: https://github.com/dw5/Metropolis
+
+My next step is to add a disconnect handler to the stack for the Websocket stack, and then to hook it up to CRUD operations on DDB, and lastly to process update messages, especially with JSON data since I'm not sure whether WSS has implicit JSON handling.
+
+## 9/5/2023
+
+Continuing with the Lobby Action API. I discovered how `!Join` works in CloudFormation. It works similar to string join in Python. Example:
+
+```
+!Join
+  - /
+  - - integrations
+    - !Ref OnConnectIntegration
+```
+
+Output: `integrations/{OnConnectIntegration}`. Previously I thought it would just append together the two arguments but for some reason needed a strange nesting structure for multiple arguments because of how YAML works.
+
+Now I'm a bit confused by Lambda refusing to send a JSON body response for a websocket API. Maybe I can find an example of a working websocket API with JSON data and see if that is normal--it works fine for HTTP requests.
+
+## 9/7/2023
+
+Found this useful code example for using a websocket handler in boto3: https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/python/cross_service/apigateway_websocket_chat/lambda_chat.py
+
+## 9/8/2023
+
+It turns out that print statements are actually sufficient to get good logs on a Lambda in Python 3.10, but there's just a delay between invoking the function and the log entry appearing. I found the following permissions error:
+
+```
+[ERROR] ClientError: An error occurred (AccessDeniedException) when calling the PostToConnection operation: User: arn:aws:sts::207922868512:assumed-role/browser-fighting-game-lob-OnUpdateStatusFunctionRo-HHFJUIVVP9JB/browser-fighting-game-lobby-OnUpdateStatusFunction-NXgIoWnSxpcG is not authorized to perform: execute-api:ManageConnections on resource: arn:aws:execute-api:us-east-1:********8512:uuhovneo02/Prod/POST/@connections/{connectionId}
+Traceback (most recent call last):
+  File "/var/task/app.py", line 42, in lambda_handler
+    client.post_to_connection(
+  File "/var/runtime/botocore/client.py", line 530, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/runtime/botocore/client.py", line 960, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+```
+
+So it looks like I need to add a policy to my Lambda to execute "execute-api:ManageConnections" on the WebSocket API. How do I do this? The [repo with the WebSocket Lambda example](https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/python/cross_service/apigateway_websocket_chat/lambda_chat.py) might be able to tell us how with its [YAML template](https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/python/cross_service/apigateway_websocket_chat/setup.yaml).
+
+It looks like the answer is in [this example repo](https://github.com/aws-samples/simple-websockets-chat-app/blob/master/template.yaml#L171) which I believe to be from AWS directly. And sure enough, that worked. Excellent!
+
+## 9/9/2023
+
+I am integrating the frontend with the lobby action API, and I'm trying to figure out a way for the frontend to sync up with the current lobby status when they first join. One idea is that we can put the current lobby status in the HTTP response to the connection request, but I don't know if I have access to the body of the connection response from the frontend.
+
+What I've developed so far is great, but it's made it clear that I need a couple more tools. First, the client cannot tell which connection / player ID represents them. Second, there's no disconnect-reconnect handling, which could be solved by assigning an ID to each connection on the server side and then storing it client side. Third, there's no mechanism for grabbing the statuses for the players already in the lobby when you join. The second problem is one I can deal with later, but the first and third are important. We also have an issue where there's no way for the client to specify what lobby they're a part of, which defeats the purpose of the lobby separation in the first place. Another issue is that improper sequencing in player status could cause the client and server to disagree on the latest status for players, but I will look into that if it's a problem (I can probably solve it with a timestamp on update messages). I can also look at a solution to this after (1) and (3).
+
+I think there should be two additoinal "endpoints" available to the clients:
+
+1. get_player_id: returns an ID such that any status update with the ID is referring to the caller. This is used by the client as soon as the connection is established.
+2. get_all_statuses: returns a list of the statuses of all players in the specified lobby. This is used by the client as soon as the cononection is established.
+
+Once the client connects, they grab their own ID and all the up-to-date player states, and they use it to populate the UI.
+
+How do I solve the issue with lobby separation? The player will know what lobby they're connecting to, so they should send that lobby ID to the lobby action API as part of the handshake. It can be included in the connection table and used as some kind of partition key to determine who should receive status updates.
+
+## 9/14/2023
+
+I looked into authentication for my app since I think it would be good to have users, especially since that would let me gate access to EC2 instances assigned for active games to only those players who are assigned to the game.
+
+It might be possible to comfortably host multiple games on one EC2 instance; but I think this is an optimization and it goes against principles of horizontal scaling.
+
+## 9/19/2023
+
+I have messed around with authentication through AWS Cognito, and it looks like we now have a process for authentication with one frontend app and multiple backends. The frontend uses Amplify UI and Amplify CLI to host a Cognito user pool for the app. It uses Amplify UI components or functions to authenticate with username and password and globally store a Java Web Token. Then, in any API call, the client can stick the JWT in the header or the content, where the server (websocket or HTTP) can read it. The server then uses the 'aws-jwt-verify' package to check the JWT against the same Cognito user pool. If the authentication is valid, response from Cognito contains the user's username, which is a unique identifier for them, so we now have authenticity for a specific identity established between server and client.
+
+This can be used across various systems, and is mainly useful for lobbies and games. In the lobby action API, authentication can be used as the key for a connection in the connections table, ensuring that a player can only be part of a single lobby and allowing other players to identify them by username (or by a display name that is associated with the username in a separate table).
+
+Game instances can keep track of their associated lobby in a DDB table, and can use that lobby ID to check against an HTTP API associated with the lobbies table and see which players should be admitted--all other players may only join as spectators.
+
+So now I should come up with the complicated process for game creation. Here's my take. There exist a FIXED number of EC2 instances for hosting games. Each has an entry in a table of instances for games.
+
+## 11/7/2023
+
+I've decided that Tuesday night is the time for working on browser fighting game. I'll try to hold to that.
+
+I want to authorize users from the client. For that, it looks like I can use AWS Amplify and attach some backend Cloud resources to the client. So I will set that up in order to try hacking something together. Then I need to set the connected microservices (such as the lobby action API and the game server) to reference the identity pool belonging to the stack. The first thing I should do is start up / set up Amplify on the frontend code. That has me following the README for browser-fighting-game client. Do I already have an Amplify stack set up? It looks like I most recently have it "locally"--does that allow some authentication? I can check by running the frontend with a component requiring Auth.
+
+To run the server, I just use `npm start`. Let's just go ahead and add a component requiring authentication to the lobby browser--you at least should not be able to join a lobby without logging in, and I don't mind forcing you to log in early. It looks like I need to install Amplify UI--the [doc](https://docs.amplify.aws/lib/auth/getting-started/q/platform/js/#build-an-authentication-experience-using-the-authenticator) says to use:
+
+```
+npm install aws-amplify @aws-amplify/ui-react
+```
+
+Now it works. As in the previous instance, the login component renders in the place of the component it's wrapping, and it has no styling. I think there's a way to include styling but I'm not worried about that at the moment-my main objective is to leverage client authentication to prove one's identity to microservices, with the following features in mind:
+
+- In the lobby screen, identify players in the lobby by their display name
+- When attempting to join a game server, the server should reject players that
+  can't verify they are one of the players in the corresponding lobby.
+
+The first change lies in the lobby action API, so I should go there next for auth proof of concept. For now, Amplify gave me a console message saying I should run `amplify push`--so lets' try that and authenticate again.
+
+I remember I did a little bit of research about using an SDK to provide the same AWS infrastructure across multiple packages. Maybe I should start up that research again to prevent having to make code changes when identity pool IDs change.
+
+I'm still getting the same error. What is the problem? The [documentation](https://docs.amplify.aws/lib/auth/getting-started/q/platform/js/#set-up-and-configure-amplify-auth) says I need to add the following to my app's entry point (App.js, index.js, main.js, etc.):
+
+```
+import { Amplify, Auth } from 'aws-amplify';
+import awsconfig from './aws-exports';
+Amplify.configure(awsconfig);
+```
+
+So I'll add that to index.tsx and see if it works. I wonder if I can make authentication optional, like checking to see if I am already authenticated and rendering the non-auth component if I'm not. I bet that's possible, since I can access Auth state without having to wrap a component in Auth. Not sure if that's an anti-pattern though, to access auth using some global function instead of central passed state/props.
+
+Looks like that was the problem--good to know! So now let's try to make a little navigation widget thing at the top that identifies the user, and we can handle logins that way. If at all possible, I want the demo to not require creating an account--but I'll focus on mechanisms for that later.
+
+So the next thing to try is bringing up my websocket API for lobby management and seeing if I can get usernames showing. The biggest obstacle I see is that you can't send data you first connect, so I think we'll need to immediately send a handshake message that has the authentication token. For good measure we should include the auth token in every request.
+
+On a side note, I think it's horrible to have websocket endpoints on the lobby action API that are basically REST endpoints--let's just set up a REST API for this!
+
+But for now, let's just boot up the lobby action API. It runs just fine and interfaces with the frontend--now I need to connect it to Cognito auth, which I believe requires augmenting the IAM roles to add Cognito permissions. Then, following my JWT verification example, I can download some JWT verifier for AWS use.
+
+So it looks like I should modify the policies attached to OnUpdateStatusFunction in template.yaml in browser-fighting-game-lobby-action to allow accessing the Cognito user pool, and I can plug in the ID directly. I found a library online [here](https://pypi.org/project/cognitojwt/) that should let me verify Cognito JWTs through Python. Putting those together, I should be able to verify and make use of usernames in the lobby menu, which is great! I'm done for this week, so now I should tear down any infrastructure. I'll keep the identity pool running since less than 50k monthly active users is free. I'm also tempted to invest in RDE so that I don't have to go straight to the cloud to test the functions--that's another thing to investigate next week.
+
+So here's what to do next week:
+- make browser-fighting-game-lobby-action UpdateStatus verify JWT and grab username.
+- set up RDE to test this API locally
+- start on game server allocation API
+
+## 11/24/2023
+
+Let's go ahead and start on the game server allocation API, since authentication can wait. With which systems does it interface and how?
+
+Here's the behavior description: 
+- The game server tells the API that it is available as soon as it is booted up
+- When all users in a lobby ready up, the backend (lobby action API) calls the server allocation API to request an available server
+- The server allocation API returns an address that clients can use to connect to the server, as well as an identifier for the server
+- The clients connect to the allocated game server directly and complete the game. After the server detects that the game is complete, it tells the server allocation API that the game is complete, and frees itself up for further allocation. The clients reconnect to the lobby, and the lobby must contact the API again to grab a server for the next game.
+
+So the biggest feasibility hurdle is this: Does an EC2 instance know the address that should be used to connect to it? I found a Stack Overflow thread [here](https://stackoverflow.com/questions/38679346/get-public-ip-address-on-current-ec2-instance) suggesting that I can, so let's give it a try.
+
+So it looks like an EC2 instance can use the following in the command line to check their own ip address:
+
+```
+curl 169.254.169.254/latest/meta-data/public-ipv4
+```
+
+They can pipe that into a file or use a Python fetch to get it in RAM for a program. Then they can pass that to the instance management service. So here's what a `POST /instance` request would look like for the game instance interface:
+
+```
+{
+  "ip": "<my public ip address>"
+  "id": "<id I just made up, or instance id>"
+}
+```
+
+For security reasons, these instances should also be granted IAM roles that give them exclusive access to the game instance interface, and from there we can trust them.
+
+The lobby API asks for instance IP in response to seeing that all the players are ready. In the corresponding Lambda, when it gets the IP, it should push t through the websocket to all clients so that they can proceed to interface directly with the server.
+
+So there are going to be 2 different API gateways that share the same underlying DDB instance.
+
+- API 1: Game instance API. Exposed to EC2 instances
+  - `POST /instance`
+    - request:
+      - ip: IP of the instance
+      - id: instance ID of the instance
+    - response: 200 on success
+  - `DELETE /instance`
+    - request:
+      - id: instance ID of the instance going offline
+        - NOTE: can we also have a mechanism for taking the instance offline automatically?
+    - response: 200 on success
+- API 2: Instance allocation API
+  - `POST /gameStart`: asks for a game server
+    - request:
+      - lobbyId: ID of the lobby involved--later this can be used to look up the players involved
+    - response:
+      - instanceIp: Public IP address of the instance to be used for the game
+      - 5xx: no instance available, please hold
+  - `POST /gameEnd`: frees up an instance 
+    - request:
+      - lobbyId: ID of the lobby involved
+    - response:
+      - 200 on success
+
+## 1/1/2024
+
+- 2:26 pm - 2:45 pm (21 minutes)
+- 2:56 pm - 4:45 pm (1h49m)
+
+total: 2h10m
+
+Objective: Create the game instance API so that game servers can be nicely lined up with lobbies, allowing the full user experience to take place.
+
+There are actually 2 APIs, but I think they share a database in common. The commonly shared table is the one listing out all available instances by ID with their IPs. How should I arrange them? Should I share a single CloudFormation stack? It looks like I've already made a repo for the instance management and instance allocation APIs under a shared CloudFormation stack.
+
+I think, ideally, I would give each their own CloudFormation stack and make a third one acting as an API layer for the database, so that the database can stand on its own. But that's almost the same thing as making a stack for just the database, just with a single schema locked down. So I'm willing to prioritize velocity with a single stack. Now I just need to remember how to deploy it.
+
+Let's take some time to try locally invoking a Lambda. It looks like I'll need to install Docker. From there I was able to run `sam local invoke --event events/gameStartEvents.json GameStart`, but it fails to access the DDB server, which I suppose doesn't get deployed.
+
+I've now successfully deployed the CloudFormation stack with one API endpoint that allocates a lobby. I tested it in a very manual fashion and it seemed to succesfully query and upate the table when we have one entry, so we should be able to use this to allocate an instance if I just make the API endpoint that lets an EC2 instance offer its own IP. That will be my next objective, and after that I'll set up the lobby and client to make use of this API to get an instance IP for the fighting game. Great!
+
+## 1/28/2024
+
+- 9:07 pm - 9:29 pm = 22 minutes
+- 9:46 pm - 11:45 pm = 119 minutes
+- total: 141 minutes
+
+Larger Objective: Create the game instance API so that game servers can be nicely lined up with lobbies, allowing the full user journey to take place.
+
+Objective 1: Create a reusable test for the API endpoint I just added, which is the one to fetch an instance IP.
+
+Sub-objective 1: Set up testing infrastructure.
+
+It looks like AWS is recommending I use `pytest`. So I've installed all necessary packages using `pip` on `requirements.txt` and I'll use `pytest` in the command line to give it a try--they have both integ tests and unit tests. For the integration tests, I need to set an env var called AWS_SAM_STACK_NAME to the name of the stack--where do I get the name of the stack?
+
+I found [this guide](https://aws.amazon.com/blogs/devops/unit-testing-aws-lambda-with-python-and-mock-aws-services/) for mocking AWS resources for unit testing in Python. Great!
+
+Using some guides, I managed to get the unit test running using mocks for AWS funcitons with `moto`. I learned a new skill today! Next, let's learn how to set up integration testing.
+
+I've now set up an integ test example in the instance management repo--it actually seems to have helped me fix my Lambda by loading the JSON body from a string submitted by the request. Now that I have a template for testing, I can use test-driven development to guide the remaining endpoints on Tuesday or so. Excellent!
+
+## 2/3/2024
+
+- 12:30 pm - 12:43 pm
+- 4:16 pm - 6:25 pm
+- 10:12 pm - 10:22 pm
+
+Now that we have unit and integ tests set up for API development, let's set up everything we need to have something functional. For the sake of agility, let's refrain from setting up anything for the server side of the API--instead I will boot up a fighting game server on EC2 running the websocket endpoint, test that it can host, and manually stick its IP in the DDB table. But before that, I'll want to set up the API integration between the client and the API for fetching the IP. I recall that the lobby management API is the one that calls the instance management API, right? I should have a reusable diagram for this given that I had this lapse in memory.
+
+I can put it together with https://app.diagrams.net. I should mainly be talking about the services involved and the interactions between them--I can probably save the finer details like databases for a later version.
+
+![alt text](design/diagram/browser-fighting-game-architecture.jpg)
+
+This is a quick sketch which I believe to line up with the original vision. What can we determine here about how clients will connect to the game server?
+
+We need the following to happen:
+1. All users in the lobby ready up.
+2. A system recognizes this fact and provides the option for the lobby owner to start the game.
+3. A system uses the Instance Management API to allocate itself an instance, acquring a URL or IP.
+4. The system pushes the URL/IP to all members of the lobby and tells them to navigate to the page for playing the game with that URL.
+5. Clients navigate to the game page with the game server.
+
+So I need to assign the responsibilities for these steps to specific systems. I also think I should split out a lobby action API from the lobby action websocket API so that things that should be HTTP request/response structures can be handled that way.
+
+Since step 4 involves pushing information, it should probably belong the the lobby action API. The lobby action API also owns the table saying who is readied up in what lobby, but the client is able to derive that same information and we'll need to verify that they're correct anyway.
+
+So, that means the following will happen:
+
+1. User tells Lobby Action WSAPI to start the game.
+2. Lobby Action WSAPI uses its DDB to determine whether all players in the lobby are readied up.
+3. Assuming all users in the lobby are ready, Lobby Action WSAPI (LAWS) grabs a game server from the Instance Management API.
+4. LAWS pushes the game server address to the clients and tells them to start playing.
+
+![alt text](design/diagram/browser-fighting-game-architecture-2.jpg)
+
+Awesome! In that case, what should I do next? I can enumerate all remaining tasks at a high level.
+
+Version 0:
+- Make sure game instance on EC2 works in some form.
+- Add 'start game' channel to LAAPI, which checks readiness and pushes a fixed instance address to all clients. This is the minimum that will allow us to experience the full user flow.
+
+Version 0.1:
+
+- Finish up startGame endpoint on Instance Management API (IMAPI) and add a fixed instance ID to the table.
+
+Version 0.2: 
+
+- Create instance allocation API and set up the game server to use it.
+
+
+That sounds like a good game plan. But at the moment we don't have a way to reset the game server. We want to make sure that a temporary disconnect does not necessarily end the game, but that the server doesn't reset unless everyone is done. We can work back from what we want the user perspective to look like with that:
+- User is navigated to the game server page. The canvas is a loading screen.
+- Once all users are connected, the game does a count down and starts.
+- The gameplay happens. One player wins the game, and the game server sends this info to clients and it displays as a win/lose screen.
+- Clients can click a button to go back to the lobby.
+
+We are actually safe for the server to reset without waiting for clients to leave--it just needs to process any animations that happen after the end of the game and then terminate the connection. Then the clients can handle everything from there--ideally they stay connected to the LAWS even during the game so that the lobby knows if they quit. Awesome, that is very simple! So what changes need to happen?
+
+- A system needs to tell the server who to expect (or at least how many people)
+- The server needs to put up a loading screen until everyone is connected.
+- The server needs to disconnect from clients and reset the game once it is done sending meaningful information. Ideally, it should be resistant to attempts to reconnect that might reset the game.
+
+Then let's do this! Where should we start? I'd say we should start with the LAWS and then move on to the game server. I'll first check how clients connect to the game server and make sure that connecting to the game server given an address is possible. Then I'll make the LAWS 'start game' endpoint cause clients to go there from a lobby. Lastly, I'll make the game server go through the necessary lifecycle steps.
+
+In that case, I guess we can try setting up some tests for the lobby action API. I already know that the functions work, so the tests shouldn't require me to make any basic changes.
+
+## 2/4/2024
+
+- 5:12 pm - 706 pm (114 minutes)
+
+I am putting together the LAWS endpoint for hitting 'start game' as a client. I found a [page](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-specification-template-anatomy-globals.html) with an example of how to stick environmental variables into a SAM template, and I figure that's what I can do with the EC2 instance IP.
+
+I've added the endpoint. But I realize that in an ultra-minimal example we don't really need the new API endpoint deployed--I can just stub it on the client code to return the target EC2 instance IP. That will let me mock things up nicely. So for now I will stub the websocket endpoint and just test out the transition between accessing the game server and accessing the lobby.
+
+I've modified the code for the frontend to allow navigation back and forth between the game and the lobby, at the expense of deferring lobby naming to an API call (which is honestly a good trade). Next, I should make the game server cut off connections to clients and reset the game state when someone wins and the death animation plays out. Then I can put the game server and client in the cloud and test out the full flow with the lobby APIs offline. Excellent!
+
+From there I can extend to allow multiple lobbies in parallel that share the server infrastructure, starting with the steps outlined from my notes yesterday.
+
+## 2/7/2024
+
+10:17 pm -
+
+As outlined in the previous day's notes, I should modify the game server to cut off connections to clients and reset the game state when someone wins and the death animation plays out. Then I can host the game server on EC2 again and go through the simplest version of the gameplay cycle from the client side.
+
+First, I'll test the server locally to verify it.
