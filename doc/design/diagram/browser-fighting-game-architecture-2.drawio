@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net" modified="2024-02-03T22:14:29.471Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0" etag="FTdLH681_MTxDNjNnQpj" version="23.1.1" type="device">
+  <diagram name="Page-1" id="kqTo7AYF7OkdLRpXlm0H">
+    <mxGraphModel dx="794" dy="466" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="nVO2MokBtu_pbqRF70A4-1" value="&lt;div&gt;Player&lt;/div&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-12" value="&lt;div&gt;Get Lobby Info&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-4" target="nVO2MokBtu_pbqRF70A4-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="320" y="170" />
+              <mxPoint x="320" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-18" value="&lt;div&gt;Actions within lobby&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-4" target="nVO2MokBtu_pbqRF70A4-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-4" value="&lt;div&gt;BFG Frontend&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="130" y="140" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-5" value="" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" target="nVO2MokBtu_pbqRF70A4-4">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="90" y="170" as="sourcePoint" />
+            <mxPoint x="140" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-6" value="Lobby Management API" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="140" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-29" value="&lt;div&gt;Get Game Server&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-7" target="nVO2MokBtu_pbqRF70A4-8">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="530" y="310" />
+              <mxPoint x="530" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-7" value="&lt;div&gt;Lobby Action API&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="280" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-8" value="Instance Management API" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="140" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-9" value="Instance Allocation API" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="390" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-27" value="&lt;div&gt;Update Server Status&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-10" target="nVO2MokBtu_pbqRF70A4-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-10" value="&lt;div&gt;Game Servers&lt;/div&gt;&lt;div&gt;&amp;nbsp;(EC2)&lt;/div&gt;" style="shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="380" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-22" value="Game Servers Table" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="620" y="260" width="60" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-23" value="&lt;div&gt;Assign Server to Lobby&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-8" target="nVO2MokBtu_pbqRF70A4-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-24" value="Manage Server availability" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-9" target="nVO2MokBtu_pbqRF70A4-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nVO2MokBtu_pbqRF70A4-28" value="Play Game" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=30;entryPerimeter=0;" edge="1" parent="1" source="nVO2MokBtu_pbqRF70A4-4" target="nVO2MokBtu_pbqRF70A4-10">
+          <mxGeometry x="0.3077" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
