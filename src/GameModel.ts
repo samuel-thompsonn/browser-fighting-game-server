@@ -3,8 +3,9 @@ import BasicCollisionChecker from './BasicCollisionChecker';
 import Character from './Character';
 import CharacterListener from './CharacterListener';
 import characterASimple from './character_files/characterASimpleSymmetrical.json';
-import GameInternal from './GameInternal';
+import GameInstance from './GameInstance';
 import SimpleCharacterFileReader from './SimpleCharacterFileReader';
+import GameInternal from './GameInternal';
 
 function applyCharacterMovement(deltaPositions: Map<Character, Position>): void {
   deltaPositions.forEach((deltaPosition: Position, character: Character) => {
@@ -16,7 +17,9 @@ function applyCharacterMovement(deltaPositions: Map<Character, Position>): void 
   });
 }
 
-export default class GameModel implements GameInternal {
+export default class GameModel implements GameInstance, GameInternal {
+  #numExpectedCharacters: number;
+
   #characters: Map<string, Character>;
 
   #characterCounter: number;
@@ -27,20 +30,35 @@ export default class GameModel implements GameInternal {
 
   #gameComplete: boolean;
 
+  #onGameStarted: (gameInstance: GameInstance) => void;
+
   #onGameComplete: (winnerID: string) => void;
+
+  #onGameTerminated: (gameInstance: GameInstance) => void;
 
   #id: number;
 
   constructor(
+    id: number,
+    numExpectedCharacters: number,
+    onGameStarted: (gameInstance: GameInstance) => void,
     onGameComplete: (winnerID: string) => void,
+    onGameTerminated: (gameInstance: GameInstance) => void,
   ) {
+    this.#numExpectedCharacters = numExpectedCharacters;
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
     this.#characterListeners = new Set<CharacterListener>();
+    this.#onGameStarted = onGameStarted;
     this.#onGameComplete = onGameComplete;
+    this.#onGameTerminated = onGameTerminated;
     this.#gameComplete = false;
-    this.#id = Math.floor(Math.random() * 10000000);
+    this.#id = id;
+  }
+
+  getID() {
+    return this.#id;
   }
 
   moveCharacter(character: Character, deltaPosition: Position): void {
@@ -63,6 +81,11 @@ export default class GameModel implements GameInternal {
 
   createCharacter(): string {
     console.log(`Game ID: ${this.#id} | Creating new character`);
+    // if the game has already started, do not admit characters.
+    if (this.#characterCounter >= this.#numExpectedCharacters) {
+      console.log(`Game ID: ${this.#id} | Cannot create new character because there are already ${this.#characterCounter} characters.`);
+      throw new Error('Failed to create a character: The game has already started!');
+    }
     const characterID = `${this.#characterCounter}`;
     const newCharacter = SimpleCharacterFileReader.readCharacterFile(characterASimple, characterID);
     this.#characterListeners.forEach((listener) => {
@@ -70,11 +93,14 @@ export default class GameModel implements GameInternal {
     });
     this.#characters.set(characterID, newCharacter);
     this.#characterCounter += 1;
-    console.log(`There are now ${this.#characters.size} characters.`); // eslint-disable-line
+    console.log(`Game ID: ${this.#id} | There are now ${this.#characters.size} characters in the game.`); // eslint-disable-line
+    if (this.#characterCounter === this.#numExpectedCharacters) {
+      this.#onGameStarted(this);
+    }
     return characterID;
   }
 
-  removeCharacter(characterID: string) {
+  removeCharacter(characterID: string): void {
     this.#characters.delete(characterID);
     this.#characterListeners.forEach((listener) => {
       listener.handleCharacterDeleted(characterID);
@@ -145,7 +171,7 @@ export default class GameModel implements GameInternal {
         deadCharacters.push(character);
       }
     });
-    if (livingCharacters.length === 1 && deadCharacters.length > 0) {
+    if (livingCharacters.length === 1) {
       return livingCharacters[0];
       // Currently risks soft lock in case of all characters dead at once
     }
@@ -155,6 +181,7 @@ export default class GameModel implements GameInternal {
   #handleGameComplete(winner: Character): void {
     if (!this.#gameComplete) {
       this.#onGameComplete(winner.getCharacterID());
+      setTimeout(() => this.#onGameTerminated(this), 5000);
     }
     this.#gameComplete = true;
   }

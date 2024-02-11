@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import ClientHandler from './ClientHandler';
 import GameModel from './GameModel';
 import { ControlsChange } from './AnimationUtil';
+import GameInstance from './GameInstance';
 
 dotenv.config();
 const ENVIRONMENT_TYPE = process.env.NODE_ENV === 'production'
@@ -17,9 +18,31 @@ const PORT = ENVIRONMENT_TYPE === 'production'
 const CORS_CLIENT_URL = ENVIRONMENT_TYPE === 'production'
   ? process.env.CLIENT_URL_PRODUCTION
   : process.env.CLIENT_URL_DEVELOPMENT;
-const SECONDS_PER_GAME_LOOP = 0.0333;
+const VERBOSE = ENVIRONMENT_TYPE !== 'production';
+const GAME_LOOPS_PER_SECOND = 30;
+const SECONDS_PER_GAME_LOOP = 1 / GAME_LOOPS_PER_SECOND;
+const MILLIS_PER_GAME_LOOP = SECONDS_PER_GAME_LOOP * 1000;
 
-const clientHandlers = new Map<string, ClientHandler>();
+// List of players that we expecct to join the game.
+// TODO: Get this information from a database/API.
+const PLAYERS = ['Player 1 Name', 'Player 2 Name'];
+
+function logVerbose(logText:string) {
+  if (VERBOSE) { console.log(logText); } // eslint-disable-line
+}
+
+const clientHandlers: ClientHandler[] = [];
+
+interface GameInstanceData {
+  gameInstance: GameInstance
+  gameInterval: NodeJS.Timer | undefined
+}
+
+const gameInstances = new Map<number, GameInstanceData>();
+
+function updateGame(gameInstance: GameInstance) {
+  gameInstance.updateGame(SECONDS_PER_GAME_LOOP);
+}
 
 function onGameComplete(winnerID: string) {
   clientHandlers.forEach((clientHandler) => {
@@ -27,8 +50,37 @@ function onGameComplete(winnerID: string) {
   });
 }
 
-let gameModel = new GameModel(onGameComplete);
-let clientCounter = 0;
+function onGameStarted(gameInstance: GameInstance) {
+  logVerbose('All players are now connected. Starting game.');
+  const gameInstanceData = gameInstances.get(0);
+  if (gameInstanceData === undefined) {
+    throw new Error('Target game instance not found');
+  }
+  gameInstanceData.gameInterval = setInterval(() => updateGame(gameInstance), MILLIS_PER_GAME_LOOP);
+}
+
+function onGameTerminated(gameInstance: GameInstance) {
+  clearInterval(gameInstances.get(gameInstance.getID())?.gameInterval);
+}
+
+function initializeGameModel(): GameInstance {
+  // const gameID = Math.floor(Math.random() * 10000000);
+  if (gameInstances.size > 0) {
+    throw new Error('A game instance already exists; we cannot support more than 1 at the moment');
+  }
+  const gameID = 0;
+  const gameModel = new GameModel(
+    gameID,
+    PLAYERS.length,
+    onGameStarted,
+    onGameComplete,
+    onGameTerminated,
+  );
+  gameInstances.set(gameID, { gameInstance: gameModel, gameInterval: undefined });
+  return gameModel;
+}
+
+initializeGameModel();
 
 const app = express();
 const server = createServer(app);
@@ -40,44 +92,66 @@ const io = new Server(server, {
   },
 });
 
-const VERBOSE = true;
-
-function logVerbose(logText:string) {
-  if (VERBOSE) { console.log(logText); } // eslint-disable-line
-}
-
 function handleCreateCharacter() {
   logVerbose('Received signal to create a character!');
-  return gameModel.createCharacter();
+  const gameInstance = gameInstances.get(0)?.gameInstance;
+  if (gameInstance === undefined) {
+    throw new Error('Target game instance was not found!');
+  }
+  return gameInstance.createCharacter();
 }
 
 function handleReset() {
+  const gameInstanceData = gameInstances.get(0);
+  if (gameInstanceData === undefined) {
+    throw new Error('Game instance was not found!');
+  }
+  gameInstances.delete(0);
   clientHandlers.forEach((clientHandler) => {
-    gameModel.removeCharacterListener(clientHandler);
+    gameInstanceData.gameInstance.removeCharacterListener(clientHandler);
     clientHandler.clearCharacterID();
     clientHandler.handleReset();
   });
-  gameModel = new GameModel(onGameComplete);
+  clearInterval(gameInstanceData.gameInterval);
+  const newGameModel = initializeGameModel();
   clientHandlers.forEach((clientHandler) => {
-    gameModel.addCharacterListener(clientHandler);
+    newGameModel.addCharacterListener(clientHandler);
   });
   logVerbose('Reset the game!');
 }
 
 function handleClientControlsChange(characterID:string, controlsChange:ControlsChange) {
-  gameModel.updateCharacterControls(characterID, controlsChange);
+  const gameInstance = gameInstances.get(0)?.gameInstance;
+  if (gameInstance === undefined) {
+    throw new Error('Target game instance was not found!');
+  }
+  gameInstance.updateCharacterControls(characterID, controlsChange);
 }
 
 const handleClientDisconnect = (client: ClientHandler): void => {
-  logVerbose('a user disconnected....');
-  gameModel.removeCharacterListener(client);
+  logVerbose('a user disconnected.');
+  const targetIndex = clientHandlers.indexOf(client);
+  if (targetIndex !== -1) {
+    clientHandlers.splice(clientHandlers.indexOf(client), 1);
+    logVerbose('Removed user from user list.');
+    logVerbose(`There are ${clientHandlers.length} users remaining.`);
+  }
+  const gameInstance = gameInstances.get(0)?.gameInstance;
+  if (gameInstance === undefined) {
+    throw new Error('Target game instance was not found!');
+  }
+  gameInstance.removeCharacterListener(client);
   const removedCharacter = client.getCharacterID();
-  if (removedCharacter) { gameModel.removeCharacter(removedCharacter); }
+  if (removedCharacter) { gameInstance.removeCharacter(removedCharacter); }
 };
 
 // I could pass io into a client handler factory to basically
 // encapsulate all websocket behavior.
 io.on('connection', (socket) => {
+  const gameInstance = gameInstances.get(0)?.gameInstance;
+  if (gameInstance === undefined) {
+    throw new Error('Target game instance was not found!');
+  }
   logVerbose('a user connected!');
   const newClient = new ClientHandler(
     socket,
@@ -86,36 +160,22 @@ io.on('connection', (socket) => {
     handleCreateCharacter,
     handleReset,
   );
-  clientHandlers.set(`${clientCounter}`, newClient);
-  gameModel.addCharacterListener(newClient);
-  // logVerbose(clientHandlers.toString());
-  clientCounter += 1;
+  clientHandlers.push(newClient);
+  logVerbose(`There are now ${clientHandlers.length} users connected.`);
+  gameInstance.addCharacterListener(newClient);
   newClient.acceptConnection();
 });
 
-app.use(express.static(path.resolve(__dirname, '../client/build')));
+app.use(express.static(path.resolve(__dirname, '../public')));
 
 app.get('*', (req, res) => {
   logVerbose('Received an HTTP GET request for a page!');
-  res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+  res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
 });
 
-// let ellipsisCount = 1;
-// const maxEllipsis = 3;
-// We can use the return value of setInterval() to get
-// an interval object which we can reference later to pause or modify
-// the game loop's pacing
-setInterval(() => {
-  // ellipsisCount %= (maxEllipsis + 1);
-  // const ellipsis = '.'.repeat(ellipsisCount) + ' '.repeat(maxEllipsis - ellipsisCount);
-  // process.stdout.write(`\rUpdating all characters${ellipsis}`);
-  // ellipsisCount += 1;
-  gameModel.updateGame(SECONDS_PER_GAME_LOOP);
-}, 1000 * SECONDS_PER_GAME_LOOP);
-
 server.listen(PORT, () => {
-  logVerbose(`NODE_ENV environmental variable value: ${process.env.NODE_ENV}.`);
-  logVerbose(`Running in ${ENVIRONMENT_TYPE} mode.`);
-  logVerbose(`Listening on port ${PORT}.`);
-  logVerbose(`Allowed origin URL for client: ${CORS_CLIENT_URL}`);
+  console.log(`NODE_ENV environmental variable value: ${process.env.NODE_ENV}.`);
+  console.log(`Running in ${ENVIRONMENT_TYPE} mode.`);
+  console.log(`Listening on port ${PORT}.`);
+  console.log(`Allowed origin URL for client: ${CORS_CLIENT_URL}`);
 });
