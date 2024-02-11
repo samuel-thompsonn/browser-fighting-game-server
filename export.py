@@ -3,7 +3,8 @@ import os
 import boto3
 
 zip_target_directories = [
-    'src'
+    'src',
+    'public'
 ]
 
 zip_target_files = [
