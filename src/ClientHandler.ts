@@ -31,8 +31,12 @@ export default class ClientHandler implements CharacterListener {
       if (this.#characterID) {
         return;
       }
-      this.#characterID = this.#onCreateCharacter();
-      this.#socket.emit('createdCharacter', { characterID: this.#characterID });
+      try {
+        this.#characterID = this.#onCreateCharacter();
+        this.#socket.emit('createdCharacter', { characterID: this.#characterID });
+      } catch (err) {
+        this.#socket.emit('createCharacterFailed', { reason: err });
+      }
     });
     if (onReset) {
       this.#socket.on('resetGame', onReset);
