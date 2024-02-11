@@ -800,8 +800,120 @@ From there I can extend to allow multiple lobbies in parallel that share the ser
 
 ## 2/7/2024
 
-10:17 pm -
+10:17 pm - 11:49 pm
+12:00 am - 1 am
 
 As outlined in the previous day's notes, I should modify the game server to cut off connections to clients and reset the game state when someone wins and the death animation plays out. Then I can host the game server on EC2 again and go through the simplest version of the gameplay cycle from the client side.
 
-First, I'll test the server locally to verify it.
+First, I'll test the server locally to verify that it works. Then I'll add the logic for ending the game.
+
+I think the server should know how many players are in the game to start out, so I should modify the check for winning to use that as a parameter.
+
+I realize that it would also be simple (and good) for me to make the server captable of running multiple game instances at the same time. I would just have to make a GameInstance object and loop through each of them on the update timer to drive them all. But I'll be able to test that once I have multiple lobbies. I almost have everything encapsulated with GameModel.
+
+I wanted to also put in the logic for starting the game loop only once all players have joined. I realize that it probably wouldn't be good to actually base it on the number of d sockets--I should instead only start the game once the required players have joined the game (hitting the Join button in the UI). Then, in the real deal, I can make the clients send that signal to the server without need for player input. So how should I arrange things in that case? Well, ideally we don't want the game instance to exist until both players have sent the JOIN signal, which means that I should handle this in the code owning the GameModel (which is just in charge of simulating game activities). That means putting JOIN signal handling in index.ts, by modifying the handler for the "Create character" signal.
+
+But I disagree with the above approach. First, the "Create character" signal handler can't handle this because it needs to check if all characters have IDs before the most recently created character ID is assigned. But more importantly, I can easily just have the game model handle things like whether it should simulate the game while players are connecting.
+
+## 2/10/2024
+
+3:05 pm - 6:15 pm
+10:47 pm - 1:31 pm
+
+Where do I pick up? I think last time I was thinking that there should be an additional layer of abstraction for connection logic that is not specific to the game itself. It can handle things like blocking for the players to join.
+
+What should I work on today? Well, what do I need to show off the end-to-end user flow minimally in production? For that, I don't need to make any changes to the server. Here's some changes on the game server logic that I would like but that I'm punting:
+
+- Add countdown before starting once everyone has connected
+- Add entry animation for characters
+- Use expected number of players to determine starting positions
+- Add end screen/prompt to user once game is complete
+- Refactor server code to separate game start/end administration from game simulation
+- Extend server code to allow multiple games
+
+But what will I actually work on today?
+
+- Host game server on EC2
+- Host client server on the cloud
+- Go through minimal flow for main menu -> lobby selector -> lobby -> game -> lobby -> game -> ...
+
+After that, I can work on integrating the lobby action UI to all components so that player status exists in the lobby.
+
+So how do I serve the client? I remember I had a whole process for it that involved serving it on my custom domain. Where are those steps? I can't seem to find them. As a backup, I found some [AWS Amplify docs](https://docs.aws.amazon.com/amplify/latest/userguide/getting-started.html) that explain how to set up auato deployments for a frontend with BFF, which is probably what I'll need if I want to enable authentication.
+
+Also, I've apparently been spending around $5-10 per month hosting an EC2 instance with a public ipv4 address for a while. I should shut that down when I'm done today.
+
+I found an "export.bat" file in the client codebase that just syncs the "build" directory to a directory called "react-cors-spa-w3dltp1i4a", which happens to still exist. Am I currently hosting the SPA? And what would I need to do for that? And does the fact that I now use React Router mean that I can't do that anymore? We'll see.
+
+For now, I guess I should use the [Website Hosting guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html) in conjunction with with the guide for [Configuring static website hosting with a custom domain](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html).
+
+Following the above guides led me to choose between making my bucket publicly available and [using a CloudFront distribution](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/getting-started-cloudfront-overview.html#getting-started-cloudfront-distribution). Since my long-term solution is probably with Amplify anyway, I think I'll go with the public bucket option. So in that case we should be able to access the site on
+```
+http://react-cors-spa-w3dltp1i4a.s3-website-us-east-1.amazonaws.com
+```
+
+I already forsee a problem arising since this doesn't have HTTPS enabled. Let's just skip straight to trying it with Amplify to see if that's simpler. I'll follow [this guide](https://docs.aws.amazon.com/amplify/latest/userguide/getting-started.html?platform=react). Apparently I already have an app set up called `bfgclient`. I also have something called "cognitoauth"--I'll take that down for now.
+
+I need to add a service role in IAM for Amplify following the guide called [Adding a service role](https://docs.aws.amazon.com/amplify/latest/userguide/how-to-service-role-amplify-console.html). It's not clear to me if I'll need to change the build settings, so I'll keep them as they are for now.
+
+I wonder if I can use Amplify to manage hosting for my entire app while still having APIs managed by different repositories. It certainly seemed like there was space for multiple repos, so I wonder how they work together. That would make things pretty convenient because I would have one place to go for deployment and I could just focus on the code.
+
+Sure enough, the deployment works! That is very convenient. But I can't connect to the server because of CORS errors, which must be because I'm not using the expected domain. So now I'll follow the guide to link up to a custom domain [here](https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html).
+
+It looks like my environmental variables for CORS are configured to be specific to an old cloudfront domain of mine. I should change that or else CORS is going to remain as an issue. And apparently the custom domain propagation could take up to 30 minutes, so I guess no is a good time to work on deploying the game server code to EC2.
+
+What is the SOP for deploying to EC2? I have export.py, which syncs an export directory and uploads it, so I assume on the EC2 instance I would just download the code, unpack it, and run it. But shouldn't there be an SOP? I guess I'll make one now.
+
+I made the SOP and it seems to work. Next, I should set up the client to look for the server at the correct address when it is deployed. Did I set up something for dev vs prod environments pointing to different servers in the client code?
+
+I have something set up with `.env.production` and `.env.development` but I don't know what I did with them. But evidently we're using .env.development.
+
+I found two good pages for this. First, this [React Environmental Variable documentation](https://create-react-app.dev/docs/adding-custom-environment-variables/) says that NODE_ENV is built-in and is set to 'development' for running `npm run start` but is set to 'production' when you run `npm run build`. But that doesn't seem to be working for me--maybe I can put it in package.json? It's probably because the server isn't a React app.
+
+For Amplify, they have a [guide](https://docs.aws.amazon.com/amplify/latest/userguide/environment-variables.html) for setting up environmental variables, so I'll try it. But it has a disclaimer saying that these environmental variables are for the build stage, so I should focus on the React documentation. I think the problem is literally that I have the wrong setup in `.env.production`--I should point it to the EC2 instance's IP, which is 34.204.61.5 at the moment. I still wonder how I ever got the server hosting on my own address. That would be ideal.
+
+So I just modified the URL to point to the EC2 server, but I probably need to do HTTPS, which is the whole reason I probably put the instance on the URL in the first place. So I should just buy another domain for hosting the backend, shouldn't I? Otherwise how am I going to enable HTTPS for it?
+
+Well, the client doesn't seem to be complaining about the connection being HTTP or anything, so maybe it will still work? Now I just need to redeploy the server. To the SOP!
+
+The problem might have been that I didn't include the port (:3000) API URL on the client side. Let's try that.
+
+I should probably also install tmux on the EC2 instance so I can more easily see if it's running anything. But it looks like disconnecting from the instance halts the server.
+
+It looks like last time I had this working, I somehow gave my custom domain to the game server. How can I do that again? I found [this guide](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-ec2-instance.html) which seems to fit the bill.
+
+I think the best solution is to get another domain name. But for now I can simply un-assign the domain name from the frontend app and use the default amplifyapp.com/ domain. Then I will assign it to the EC2 instance, following the guide. That way I'll know it has strong HTTPS coverage. Then I'll set the frontend to point to that target domain and we'll see if it works. For now I have to wrap up, so that's for next time.
+
+Can I pause the EC2 instance? Yes, so I did that and now I'm logging out.
+
+Logging back in. I'm going to disconnect the custom domain from Amplify and connect it to the EC2 instance. Then I'll follow [this guide](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-ec2-instance.html) to make it point to my EC2 instance.
+
+To make it clear whether I can access the server or not in general, I will add a basic `GET /` endpoint. I did that, and now I know that the EC2 server is publicly available and that its CORS is configured for origin URL sam-thompson-test-development.link. It turns out that since I can use a subdomain for the game server, I can actually share the subdomain, which is great. But for now let's change the server to have CORS for the source URL of the Amplify server, which is https://master.dgc1mgaykpjuw.amplifyapp.com. Then I also need to point the client to try contacting the websocket API at http://game-server.sam-thompson-test-development.link:3000/. Wait, why is it not HTTPS? That's the whole reason I pointed it to the domain in the first place.
+
+This time, I got "mixed blocked" as the response instead of CORS errors, which is great progress in my opinion! But that means I'll need to host the server on an HTTPS address. How do I do that? First, I can try to configure a Route53 record for the base domain name and see if that works.
+
+I followed Samuel Messigah's answer on StackOverflow [here](https://stackoverflow.com/questions/40761309/adding-ssl-to-domain-hosted-on-route-53-aws) to set up the certificate on Certificate Manager--let's test if it works now. Nope, it still is unable to certify. What's going on? The problem might actually be that we're using port 443 and the EC2 instance security zone can't handle that. But I definitely have 443 set up on the security group, so I don't think that's it.
+
+Looking at the records in Route53, we have a CNAME record for frontend.sam-thompson-... but we just have an A record for game-server.sam-thomposon-..., so maybe adding a CNAME record for game-server will fix it? I don't think so since the purpose of CNAME is just to map host names to host names, which has nothing to do with HTTPS.
+
+But I realize that the main problem is that HTTPS doesn't work on my EC2 instance, so of course I wouldn't expect it to work here. How did I have that working before? It looks like I should be using the https plugin from Express.
+
+It looks like the recommended approach by Stack Overflow is to use a Load Balancer, so I'll try that. I have a link [here](https://repost.aws/knowledge-center/configure-acm-certificates-ec2) for guidance. So I'm creating an Application Load Balancer.
+
+When I first made the load balancer, I set it to an Availability Zone that doesn't contain the instance. I need to use availability zone 1e, so let's start it over. I think I also need to use port 80, but I can't guarantee that. I just checked, and it looks like I don't need to use port 80; port 3000 works just fine because my instance group forwards traffic to that port on the EC2 instance. Nice! But I'm getting a WARNING when I try to use HTTPS--I think it's because I am using the record for my domain name but not connecting with that domain name.
+
+So I added a CNAME record in Route53 to forward my custom game-server domain name to the DNS name for the load balancer, in the hopes that my browser would be happy with it. Let's see what happens. It worked!! https://game-server.sam-thompson-test-development.link/. So now what's left is to make sure this domain is plugged into the SPA and try it out.
+
+It worked!!!! I now have a deployed Amplify app connecting to a deployed EC2 game server. This is excellent. Now I just need to adjust the user flow to reset the game after it terminates.
+
+I also was wondering how to deal with the fact that reloading was broken for the client. But it looks like there is [documentation here](https://docs.aws.amazon.com/amplify/latest/userguide/redirects.html) for a redirect that solves for this and accounts for the exact react-router use case I'm part of. It had a rule that I could literally copy and paste that fixed the issue. Amazing!
+
+Next, I will make the server reset state when the game is over. I'll make it so that it doesn't start the game simulation again until players rejoin. That will essentially get me the correct happy-path flow. Then I can connect things up to the lobby action API to return the (dummy) game server IP. This is a huge success though, and it makes me very happy. Plus, this means I can use my one domain for the entire project (through subdomains) instead of purchasing a few.
+
+## 2/11/2024
+
+6:15 pm -
+
+Annie recommended I take another look at whether there's cloud services available for game server hosting, since it seems strange that EC2 is the only service that can handle this. So first I wanted to double check if there was an AWS solution, and I found some documentation [here](https://docs.aws.amazon.com/gamelift/latest/developerguide/gamelift_quickstart_customservers_designbackend_arch_websockets.html) for Amazon GameLift, which seems to support something called a "GameLift fleet". Could this match my use case? It seems to involve a fleet instance being allocated to connect directly to the client, so it just might work. But I guess I'm confused about step 11 where it says the client connects to the IP of the game server, since it seems like the websocket library would reject this.
+
+It looks really interesting, though, so I would like to check it out. It looks like the tutorial will need some time to initialize cloud resources, though, so in the meantime I can work on the game itself to have the user flow look very nice.
