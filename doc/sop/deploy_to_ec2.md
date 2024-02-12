@@ -9,8 +9,7 @@ This might not be the long-term deployment solution, but here's how to deploy th
 `
 5. unzip the app on the instance: `unzip app.zip -d ~/app-info/bfg-server`
 6. `cd bfg-server`, then install dependencies: `npm install`.
-7. set environment to production to expect network calls from a specified source: `export NODE_ENV=production`.
-8. Run the server: `npm run start`.
+8. Run the server with PROD environment: `npm run start-prod`.
 
 ### Notes
 
