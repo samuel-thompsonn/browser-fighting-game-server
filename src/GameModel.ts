@@ -7,6 +7,9 @@ import GameInstance from './GameInstance';
 import SimpleCharacterFileReader from './SimpleCharacterFileReader';
 import GameInternal from './GameInternal';
 
+const STAGE_WIDTH = 350;
+const STAGE_X_OFFSET = -50;
+
 function applyCharacterMovement(deltaPositions: Map<Character, Position>): void {
   deltaPositions.forEach((deltaPosition: Position, character: Character) => {
     const currentPosition = character.getPosition();
@@ -15,6 +18,21 @@ function applyCharacterMovement(deltaPositions: Map<Character, Position>): void 
       y: currentPosition.y + deltaPosition.y,
     });
   });
+}
+
+function getCharacterPosition(
+  characterIndex: number,
+  totalCharacters: number,
+  stageWidth: number,
+  stageOffset: number,
+): Position {
+  if (characterIndex >= totalCharacters) {
+    throw new Error(`Cannot determine position for a character with index ${characterIndex} because there are only ${totalCharacters} players expected.`);
+  }
+  return {
+    x: ((stageWidth / (totalCharacters + 2)) * (characterIndex + 1)) + stageOffset,
+    y: 0,
+  };
 }
 
 export default class GameModel implements GameInstance, GameInternal {
@@ -87,7 +105,14 @@ export default class GameModel implements GameInstance, GameInternal {
       throw new Error('Failed to create a character: The game has already started!');
     }
     const characterID = `${this.#characterCounter}`;
-    const newCharacter = SimpleCharacterFileReader.readCharacterFile(characterASimple, characterID);
+    const characterTemplate = SimpleCharacterFileReader.readCharacterFile(characterASimple);
+    const newCharacterPosition = getCharacterPosition(
+      this.#characterCounter,
+      this.#numExpectedCharacters,
+      STAGE_WIDTH,
+      STAGE_X_OFFSET,
+    );
+    const newCharacter = characterTemplate.createCharacter(characterID, newCharacterPosition);
     this.#characterListeners.forEach((listener) => {
       newCharacter.subscribe(listener);
     });

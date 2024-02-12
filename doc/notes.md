@@ -918,6 +918,15 @@ Annie recommended I take another look at whether there's cloud services availabl
 
 It looks really interesting, though, so I would like to check it out. It looks like the tutorial will need some time to initialize cloud resources, though, so in the meantime I can work on the game itself to have the user flow look very nice.
 
-But it looks like GameLift is built for C++, C# and Unreal only, so I couldn't yet use a JS web app as the client for GameLift. But then I found [this Codeberg repo](https://codeberg.org/CodeOnCanvas/gamelift-realtime-client) that seems to exactly what I'm looking for--I wonder if it would work!
+But it looks like GameLift is built for C++, C# and Unreal only, so I couldn't yet use a JS web app as the client for GameLift. But then I found [this Codeberg repo](https://codeberg.org/CodeOnCanvas/gamelift-realtime-client) that seems to exactly what I'm looking for--I wonder if it would work! We'll want to go back to this once I have the lobby management API working.
 
 Apparently I don't have any instances running at all. What happened to my instance that was running the game server? I guess it terminated because it was stopped? My load balancer is also gone. Did I dream what happened yesterday? No, it's that I'm plugged in to a different region for some reason. Anyway, I should be developing locally.
+
+For my coding today, I'm going to make the server reset the game when it terminates, and we will make the sure the client does NOT get to rejoin immediately. But ultitmately this needs to be up to something done by the lobby action WSAPI or some other system to (1) only spawn a game instance when it is demanded, (2) destroy the game instance when the game is done, and (3) determine which players are permitted to connect to which game.
+
+So here's my decision: I'll scrap the instance allocation API and try going with GameLift once I have need for multiple game servers. For now I'll try one game server, one lobby etc. Either way, I think the best thing I can do is make the game experience itself look polished. So here's what I can do:
+
+1. Make character starting positions make sense: DONE
+1. Put a "waiting for players" screen in the client code for when not all players have connected
+2. Put a countdown before the game starts
+3. Reset the gamestate when the game ends

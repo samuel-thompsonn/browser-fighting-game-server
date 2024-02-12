@@ -1,5 +1,3 @@
-import { Position } from './AnimationUtil';
-import Character from './Character';
 import {
   AnimationState,
   FileAnimationDescription,
@@ -7,6 +5,7 @@ import {
   FileCollisionItem,
   StateInteractionDescription,
 } from './CharacterFileInterface';
+import CharacterTemplate from './CharacterTemplate';
 import CollisionEntity from './CollisionEntity';
 import StateInteraction from './state_interaction/StateInteraction';
 
@@ -133,19 +132,15 @@ function getAnimationGraph(
  * Reads a character file to create a character.
  */
 export default class SimpleCharacterFileReader {
-  static readCharacterFile(characterData: SimpleCharacterFileData, characterID: string): Character {
+  static readCharacterFile(
+    characterData: SimpleCharacterFileData,
+  ): CharacterTemplate {
     const globalInteractionsMap = getGlobalInteractionsMap(characterData.interactions);
     const animationGraph = getAnimationGraph(characterData.animations, globalInteractionsMap);
-    const startPositon:Position = {
-      x: 50,
-      y: 0,
-    };
-    return new Character(
-      characterID,
-      startPositon,
-      characterData.stats.movementSpeed,
+    return new CharacterTemplate(
       characterData.stats.movementSpeed,
       characterData.stats.knockbackStrength,
+      characterData.stats.maxHealth,
       animationGraph,
       getAnimationStateID(characterData.initialState, 0),
     );
