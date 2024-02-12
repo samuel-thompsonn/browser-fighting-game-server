@@ -9,16 +9,8 @@ import { ControlsChange } from './AnimationUtil';
 import GameInstance from './GameInstance';
 
 dotenv.config();
-const ENVIRONMENT_TYPE = process.env.NODE_ENV === 'production'
-  ? 'production'
-  : 'development';
-const PORT = ENVIRONMENT_TYPE === 'production'
-  ? process.env.PORT_PRODUCTION
-  : process.env.PORT_DEVELOPMENT;
-const CORS_CLIENT_URL = ENVIRONMENT_TYPE === 'production'
-  ? process.env.CLIENT_URL_PRODUCTION
-  : process.env.CLIENT_URL_DEVELOPMENT;
-const VERBOSE = ENVIRONMENT_TYPE !== 'production';
+const { NODE_ENV, PORT, CLIENT_URL } = process.env;
+const VERBOSE = NODE_ENV !== 'production';
 const GAME_LOOPS_PER_SECOND = 30;
 const SECONDS_PER_GAME_LOOP = 1 / GAME_LOOPS_PER_SECOND;
 const MILLIS_PER_GAME_LOOP = SECONDS_PER_GAME_LOOP * 1000;
@@ -86,7 +78,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: CORS_CLIENT_URL,
+    origin: CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -175,7 +167,7 @@ app.get('*', (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`NODE_ENV environmental variable value: ${process.env.NODE_ENV}.`);
-  console.log(`Running in ${ENVIRONMENT_TYPE} mode.`);
+  console.log(`Running in ${NODE_ENV} mode.`);
   console.log(`Listening on port ${PORT}.`);
-  console.log(`Allowed origin URL for client: ${CORS_CLIENT_URL}`);
+  console.log(`Allowed origin URL for client: ${CLIENT_URL}`);
 });

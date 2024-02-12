@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@dotenvx/dotenvx": "^0.15.3",
     "@types/express": "^4.17.13",
     "@types/node": "^16.11.20",
     "cors": "2.8.5",
@@ -22,6 +23,7 @@
     "build": "tsc",
     "clean": "rm -rf build",
     "launch": "node build/index.js",
-    "start": "tsc && node build/index.js"
+    "start": "tsc && dotenvx run --env-file=.env.development -- node build/index.js",
+    "start-prod": "tsc && dotenvx run --env-file=.env.production -- node build/index.js"
   }
 }
