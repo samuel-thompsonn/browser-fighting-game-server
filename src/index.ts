@@ -7,6 +7,7 @@ import ClientHandler from './ClientHandler';
 import GameModel from './GameModel';
 import { ControlsChange } from './AnimationUtil';
 import GameInstance from './GameInstance';
+import GameListener from './GameListener';
 
 dotenv.config();
 const { NODE_ENV, PORT, CLIENT_URL } = process.env;
@@ -14,6 +15,7 @@ const VERBOSE = NODE_ENV !== 'production';
 const GAME_LOOPS_PER_SECOND = 30;
 const SECONDS_PER_GAME_LOOP = 1 / GAME_LOOPS_PER_SECOND;
 const MILLIS_PER_GAME_LOOP = SECONDS_PER_GAME_LOOP * 1000;
+const MILLIS_FOR_GAME_START = 3000;
 
 // List of players that we expecct to join the game.
 // TODO: Get this information from a database/API.
@@ -23,7 +25,7 @@ function logVerbose(logText:string) {
   if (VERBOSE) { console.log(logText); } // eslint-disable-line
 }
 
-const clientHandlers: ClientHandler[] = [];
+const clientHandlers: GameListener[] = [];
 
 interface GameInstanceData {
   gameInstance: GameInstance
@@ -43,12 +45,20 @@ function onGameComplete(winnerID: string) {
 }
 
 function onGameStarted(gameInstance: GameInstance) {
-  logVerbose('All players are now connected. Starting game.');
+  logVerbose(`All players are now connected. Starting game in ${MILLIS_FOR_GAME_START} millis.`);
   const gameInstanceData = gameInstances.get(0);
   if (gameInstanceData === undefined) {
     throw new Error('Target game instance not found');
   }
-  gameInstanceData.gameInterval = setInterval(() => updateGame(gameInstance), MILLIS_PER_GAME_LOOP);
+  setTimeout(() => {
+    console.log('Starting the game simulation.');
+    gameInstanceData.gameInterval = setInterval(
+      () => updateGame(gameInstance),
+      MILLIS_PER_GAME_LOOP,
+    );
+  }, MILLIS_FOR_GAME_START);
+  const gameStartTime = new Date(new Date().getTime() + MILLIS_FOR_GAME_START);
+  clientHandlers.forEach((clientHandler) => clientHandler.handleGameStart(gameStartTime));
 }
 
 function onGameTerminated(gameInstance: GameInstance) {
@@ -107,7 +117,7 @@ function handleReset() {
   clearInterval(gameInstanceData.gameInterval);
   const newGameModel = initializeGameModel();
   clientHandlers.forEach((clientHandler) => {
-    newGameModel.addCharacterListener(clientHandler);
+    newGameModel.addGameListener(clientHandler);
   });
   logVerbose('Reset the game!');
 }
@@ -154,7 +164,7 @@ io.on('connection', (socket) => {
   );
   clientHandlers.push(newClient);
   logVerbose(`There are now ${clientHandlers.length} users connected.`);
-  gameInstance.addCharacterListener(newClient);
+  gameInstance.addGameListener(newClient);
   newClient.acceptConnection();
 });
 

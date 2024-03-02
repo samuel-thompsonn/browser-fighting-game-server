@@ -1,7 +1,7 @@
 import { ControlsChange, Position } from './AnimationUtil';
 import BasicCollisionChecker from './BasicCollisionChecker';
 import Character from './Character';
-import CharacterListener from './CharacterListener';
+import GameListener from './GameListener';
 import characterASimple from './character_files/characterASimpleSymmetrical.json';
 import GameInstance from './GameInstance';
 import SimpleCharacterFileReader from './SimpleCharacterFileReader';
@@ -44,7 +44,7 @@ export default class GameModel implements GameInstance, GameInternal {
 
   #pendingMovement: Map<Character, Position[]>;
 
-  #characterListeners: Set<CharacterListener>;
+  #gameListeners: Set<GameListener>;
 
   #gameComplete: boolean;
 
@@ -67,7 +67,8 @@ export default class GameModel implements GameInstance, GameInternal {
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
-    this.#characterListeners = new Set<CharacterListener>();
+    this.#gameListeners = new Set<GameListener>();
+    this.#gameListeners = new Set<GameListener>();
     this.#onGameStarted = onGameStarted;
     this.#onGameComplete = onGameComplete;
     this.#onGameTerminated = onGameTerminated;
@@ -86,15 +87,15 @@ export default class GameModel implements GameInstance, GameInternal {
     this.#pendingMovement.get(character)?.push(deltaPosition);
   }
 
-  addCharacterListener(listener: CharacterListener): void {
-    this.#characterListeners.add(listener);
+  addGameListener(listener: GameListener): void {
+    this.#gameListeners.add(listener);
     this.#characters.forEach((character) => {
       character.subscribe(listener);
     });
   }
 
-  removeCharacterListener(listener: CharacterListener): void {
-    this.#characterListeners.delete(listener);
+  removeCharacterListener(listener: GameListener): void {
+    this.#gameListeners.delete(listener);
   }
 
   createCharacter(): string {
@@ -113,7 +114,7 @@ export default class GameModel implements GameInstance, GameInternal {
       STAGE_X_OFFSET,
     );
     const newCharacter = characterTemplate.createCharacter(characterID, newCharacterPosition);
-    this.#characterListeners.forEach((listener) => {
+    this.#gameListeners.forEach((listener) => {
       newCharacter.subscribe(listener);
     });
     this.#characters.set(characterID, newCharacter);
@@ -127,7 +128,7 @@ export default class GameModel implements GameInstance, GameInternal {
 
   removeCharacter(characterID: string): void {
     this.#characters.delete(characterID);
-    this.#characterListeners.forEach((listener) => {
+    this.#gameListeners.forEach((listener) => {
       listener.handleCharacterDeleted(characterID);
     });
     console.log(`There are now ${this.#characters.size} characters.`); // eslint-disable-line

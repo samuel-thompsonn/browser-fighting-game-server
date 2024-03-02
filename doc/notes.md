@@ -912,7 +912,7 @@ Next, I will make the server reset state when the game is over. I'll make it so 
 
 ## 2/11/2024
 
-6:15 pm -
+6:15 pm - 8:15 pm
 
 Annie recommended I take another look at whether there's cloud services available for game server hosting, since it seems strange that EC2 is the only service that can handle this. So first I wanted to double check if there was an AWS solution, and I found some documentation [here](https://docs.aws.amazon.com/gamelift/latest/developerguide/gamelift_quickstart_customservers_designbackend_arch_websockets.html) for Amazon GameLift, which seems to support something called a "GameLift fleet". Could this match my use case? It seems to involve a fleet instance being allocated to connect directly to the client, so it just might work. But I guess I'm confused about step 11 where it says the client connects to the IP of the game server, since it seems like the websocket library would reject this.
 
@@ -930,3 +930,171 @@ So here's my decision: I'll scrap the instance allocation API and try going with
 1. Put a "waiting for players" screen in the client code for when not all players have connected
 2. Put a countdown before the game starts
 3. Reset the gamestate when the game ends
+
+## 2/13/2024
+
+9:30 pm - 11:12 pm
+
+I'm working on making the frontend end-to-end experience polished by coordinating with the backend to start and end the game gracefully. I am tempted to work on the starting positions again to make them look good on the frontend, but I realize that's actually a frontend issue. So I'll keep the starting positions calculation unchanged. That means it's time to make the "waiting for players" screen.
+
+So, how should it work? The screen should be owned by the frontend but should use the canvas so that there's no elements moving around once we load into the game. The screen should appear when the player first opens the page and the client should transition to the 'game screen' once it gets a signal from the server that the game is about to start. Then we render a countdown before the match actually starts.
+
+So let's implement it like this: When all players connect, the game pushes a message to the clients saying that the game is starting and saying the timestamp at which inputs will start being accepted. Clients then display a countdown accordingly.
+
+Progress update: I have the new signal implemented. Next, I should make the frontend show a loading screen (maybe with some debug information for myself) when not all players have joined yet.
+
+I've now added an extremely simple and bad looking loading screen without a transition. But it behaves pretty much as expected, so that's great. For the next stage of the work, I'm interested in trying a proof of concept for GameLift with Node and React to see if it's possible to use it for my service. That would be very cool! As a reminder, the link for the library to make a WebSocket connection to GameLift is here: https://codeberg.org/CodeOnCanvas/gamelift-realtime-client. And ideally I should take their code chunk by chunk.
+
+## 2/18/2024
+
+9:15 pm - 10:35 pm
+11:25 pm - 11:35 pm
+
+Found a nice thread about unauthenticated user access to the app, which is exactly what I need to solve for mapping users -> game sessions:
+- https://github.com/aws-amplify/amplify-js/issues/711
+
+What should I do today? I am not sure whether or not I should generally aim to go for GameLift or not. My use case is not quite the one supported by GameLift, so I feel like it might not be appropriate for me to try using it at the moment when I already have a pretty simple architecture for game server assignment that will work fine. I think for my minimal product demo I'll allow game servers to host multiple game instances, but limit it to X (maybe 2) instances per server. That way I'll have horizontal scaling while still having full resource allocation! And that will mean I can host one cloud desktop that lets me demo a multi-lobby system.
+
+So, where are we in the roadmap? I don't have the minimal game loop set up because the game doesn't reset fully after someone wins. I don't need to close any socket connections when the game resets; I just need to undo the effects of when the client joined the game. Where are we on that now?
+
+Just walking through the user flow, here's what I notice:
+
+1) The client just sees a frozen screen with "Player X wins!" on it. This is not necessarily a bad thing; the browser should navigate back to the lobby automatically but I shouldn't rely on that succeeding, so I'm using the "back to lobby" button.
+2) When I go back to the lobby and then go back to the game, I get rejected from the game because there are already 2 characters connected to the current lobby.
+
+I can wait for solving (1) so I'll focus on (2). I'm most interested in solving it through enabling unauthenticated users and making the server contact an API to check what user routes to what lobby. That sounds like fun, so I'll try it out using the resources I found today. So I'm starting by following [this comment](https://github.com/aws-amplify/amplify-js/issues/711#issuecomment-414100476). Unfortunately it means I might need to manually modify the identity pools.
+
+I couldn't find the configuration on the console for the identity pool. But just to verify things, I checked whether the frontend could access unauthenticated credentials and I got this exception: "NotAuthorizedException: Unauthenticated access is not supported for this identity pool." So that means it is currently an identity pool setting. Is there not a way to enable unauthenticated users in Amplify using the CLI or JSON settings? According to [StackOverflow](https://stackoverflow.com/questions/53766100/how-to-properly-handle-unauthenticated-users-and-requests-in-aws-amplify-appsync) and the Amplify Android docs I can use `amplify update auth` and manually configure unathuenticated access. Indeed, there's literally an option for unauthenticated login if I choose to manually configure things.
+
+I modified the Cognito settings to the best of my ability and I am now updating the deployment in the cloud. So hopefully now I'll be able to use an unauthenticated user. Sure enough, it's there now! What do I do next? I need to actually use this in my APIs. I can actually see the user in the Identity Pool on the web app, which is very cool.
+
+So, where do I use this identity to convince the server of my identity? Here's how the end-to-end flow looks:
+
+1. Client makes a websocket connection to a game server. They specify a game ID
+2. Game server plugs them in to updates from that game
+3. Client sends a request to join as a player in the game. They attach their credentials
+4. Game server uses the credentials to verify their identity (using Cognito). Then they send the verified identity to an API to see if they belong to a game. If they belong to the game they're assigned to, they can join as a player.
+
+What puzzle pieces am I missing for this? First, I need to put code in the server that verifies the user. Second, I don't think I have an API with an endpoint mapping players to game IDs.
+
+First, let's do the simple problem: Identify a given user. How have I done this before? I think it had something to do with verifying identity using a JWT token. It uses a package called "aws-jwt-verifier" which I think I already have installed.
+
+But after some research it came to my attention that this is an inherently unauthenticated user. I have my doubts because I have things like an "accessKeyId", "secretAccessKey" and "sessionToken" but I can just focus on those later. For now I'll just send the identityId and the server will trust the user without further verification. So the main tech we've gained is that I can automatically assign IDs to users that persist for their session, which is great!
+
+So next I should make an API endpoint the server can use to check whether a user ID is associated with a game. Should this be on the lobby management API? Do I already have a table mapping users to anything in my plan? I have the lobby action API and it owns a table, so I should just make an API gateway for that table. It's public information anyway.
+
+The lobby action API's table doesn't have a game ID. So I guess I need a separate table for the mapping from user ID to game. Is that a whole new API? I think it is. I need to figure out how this factors in to the whole architecture.
+
+I think the data model should have rows (userId, gameId, lobbyId). Then it should have an API layer on top for getting all user IDs given a game ID. But the lobby action API already has (connectionID, userID, lobbyID) in a table, so I feel like that is almost all the information already. Should I just attach a second API Gateway to the lobby management API? I think that would be pretty simple.
+
+But I feel quite tired, so I'll just lay out the plan for my future self.
+
+- Define API contract and name for the gateway to verify user <-> lobby.
+- Set up a system in the frontend to send an arbitrary (fake) user identity
+- Stub the API integration on the game server to return a situation where 2 players are in lobby 1 and 2 players are in lobby 2
+- use the frontend <-> game server interaction to assign players to the correct lobby
+- Maybe make the "JOIN" request an HTTP instead of WS request so that we can map a specific response to it that the user can respond to?
+
+## 2/19/2024
+
+8:42 pm - 
+
+What should we do? Well, I feel like reviving the Lobby Action API and making it public (with CORS) so that we can better test the lobby flow. That way we also would have a more coherent system for the server to see what lobbies exist and which identities map to them. But I think I'm getting ahead of myself and can get a faster result by just spoofing user IDs like I defined yesterday.
+
+How should a game begin? I had two ideas:
+
+1) user sends a request to join (as a spectator or as a player), citing a specific game ID. Then the server looks up the game ID and checks if the player is part of it. If they are, it boots up a game.
+2) server has an HTTP endpoint for starting a game, which is sent by some API that knows when a game starts.
+
+I like (2) a lot better because (1) is technically a race condition if two users connect to different servers at the same time. And I think this aligns with my original architecture, where the lobby action API calls a game server API. I just need to make the game server API send a signal to the game server. So let's get the user flow in order:
+
+- Client  ->  LAAPI: "Start game" (everyone is ready)
+- LAAPI    ->  GSAPI: "Start game" (data: lobby ID)
+- GSAPI   ->  Game Server: "Start game" (data: game ID, lobby ID)
+- Game server -> GSAPI: 200 OK (data: server address)
+- GSAPI   -> LAAPI: 200 OK (data: game ID, )
+- LAAPI   -> Client (data: game ID, )
+
+I can't stub this super simply because I need something that coordinates between the client and the game server. I guess I could make the client call the game server directly on the "Start game" endpoint for now with a spoofed game ID and lobby ID. But I really feel like putting up some APIs with persistence so I can iterate on them.
+
+For continuous deployment from commits, I found [this article](https://aws.amazon.com/blogs/compute/using-github-actions-to-deploy-serverless-applications/) which might do just the trick. But I'll ignore that for now since it's just a fancy version of using AWS SAM to deploy.
+
+Resources for using a custom domain for the lobby action API:
+
+- https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-api-gateway.html
+- https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-regional-api-custom-domain-create.html
+
+Like many things in AWS, it is suprisingly involved to do anything at all. Will I need to reconfigure this every time I re-deploy the API? And why am I getting a 403 error? Oh, it's because I was using the /Prod endpoint which doesn't exist.
+
+After updating some permissions with the help of ChatGPT, I redeployed the API, and it still is hosted at the same custom domain. Great! Now let's see if I can process a message.
+
+I still couldn't, and I was getting internal server errors because the endpoint the Lambda was trying to post to when communicating with the client was invalid. The problem is that my custom domain mapping removed the "/Prod" part of the domain, but I was still using that in my Lambda implementation. So I fixed that.
+
+Now I have a working deployed websocket that's integrated with my app! Next, I want to modify it to use the player's login (or Cognito ID for an anonymous session) as their identifier. What should that look like? Right now, the table has lobby ID, ready status, and connection ID. It should have an additional field for user ID. Players should also tell the API what lobby they're in--they should probably make an HTTP request to the LAAPI to join the lobby before they can start receiving updates about player status.
+
+But I think that actually gets me ahead of myself. For now I should focus on adding user IDs to the table but still have everyone in the same lobby. I'm going to need to include user ID in every request anyway so that we can associate the connection ID with the user ID.
+
+That is pretty simple to do. Next, I should set up a system for the LAAPI or LAWS to send a request to the Game Server to start up a game. Let's summarize the next steps:
+
+1) Create the LAAPI and deploy it. It should have two endpoints: (a) join the lobby, and (b) start the game. We only care about (b) right now. In the long run, this should be a totally private API.
+2) Make a Game Server API hosted on the Game Server with a CreateGame endpoint to create a game instance.
+3) Make the "start game" LAAPI endpoint contact the "create game" game server endpoint (with a list of allowed players) and send a response to the clients (with a game ID and) when the game creation is confirmed.
+4) Make the clients navigate to the game server when they get the response back.
+
+But actually, I think the LAAPI might not belong here at all, because LAWS needs to push the game server address to all clients. So I guess this is all done through the websocket API. TODO: Look into whether there's a way to asynchronously push info to clients in a serverless websocket API.
+
+## 2/23/2024
+
+10:19 pm - 11:55 pm (1h36m)
+12:07 am - 12:45 am (0h38m)
+12:57 am - 1:48 am  (0h51m)
+
+Based on my steps lined out from yesterday, I should start with the HTTP LA API, on the same stack (sharing a DDB) as LAWS. But how do I contend with the fact that I don't know how to trigger a signal being broadcast to clients except in response to a stimulus from a client?
+
+So I looked up asynchronous messages for Websocket APIs and I found [this webpage](https://about.grabyo.com/websockets-for-asynchronous-events/) explaining that the "Connection URL" can be used by the backend to send data back through the gateway. So any Lambda with permission can actually do the exact process I do to post to connections. That is exactly what I need, so let's try it with the `startGame` endpoint.
+
+Also, I've apparently already set a domain name for an HTTP API in CloudFormation before--I did it for the lobby management API.
+
+I also decided to look up validation for unauthenticated users again and found a [StackOverflow post](https://stackoverflow.com/questions/68077413/how-to-authenticate-guest-unauthenticated-users-with-api-gateway-cognito-authori) that says I should be able validate a "token" against the identity pool using a Lambda, so I'm interested in that.
+
+I also ran into a CORS error which I've apparently already solved in the lobby management API. But it also seems that CORS isn't my only issue--I'm getting a KeyError from the response, and I figure the Lambda probably is trying to send a 500 response but is not including CORS headers on it. So I need to fix that and make sure errors result in a 500 response with CORS support. But what's causing us to get a 500 response? It doesn't seem to be appearing on CloudWatch logs for the Lambda function.
+
+I just called the function again and this time it DID appear on CloudWatch and did not seem to report any error, but it get a 500 internal server error according to the client. Why?
+
+The API Gateway console lets you make a Test request to the API endpoint in the browser, and my test request showed that the error is from a malformed Lambda response. So what should the Lambda response look like for a POST request? Should it contain a JSON field? My lobby management API does that, so I guess let's try that.
+
+The problem was that I had the "message" field which is extraneous. Okay, why can't they just ignore it? But that's okay. Yay, it worked in the client! Now let's configure this to actually make use of the websocket.
+
+Now it's evident that something is wrong with my logic that determines if everyone in the lobby is readied up, since it's saying not everyone is ready when it should be saying everyone is ready.
+
+It looks like the issue is that when it reads the table it only reads the key, not the 'ready' column. How do I make it read the 'ready' column? It's because my projection expression explicitly includes only connection ID!
+
+After fixing that, I got a 500 exception again. It's because we're timing out the request after 3 seconds, so I'll just increase the timer. But it's an issue that we're doing the requests synchronouslly--but that doesn't scale. I can modify it in General Configuration, and I assume I can do so in CloudFormation. When I increased the timeout, it took only 2 seconds to execute, but that's because there were no connections in the table.
+
+The next time I ran it, it took 8 seconds and failed to connect because the URL for managing the API is apparently misconfigured. The solution was just to hard code the domain to point to the one I include in the certificate. Not ideal. So instead I made an environment variable in the template based on the domain--and that worked! Yay!
+
+The next objective is to set up the API on the EC2 instance for starting a game, and then wire up the startGame API endpoint on the LA API to it. Then I'll have the full game loop. I think this also means I need to add identity as a field to the gameStart Lambda function, which is a great opportunity to try out token verification for unauthorized users. So, next steps:
+
+1) Add identity (without verification) to the gameStart LAAPI endpoint.
+2) Create an HTTP API hosted on the EC2 instance with a gameStart endpoint to notify the game server of the impending game + list of players.
+3) Wire up the React code to it.
+
+## 3/1/2024
+
+8:17 pm - 9:13 pm (0h56m)
+
+9:38 pm - 
+
+What should I be working on today? I laid out some steps for myself last time I worked on the project.
+
+The first step is to add "identity" to my gameStart LAAPI endpoint. I can do that by sending ID directly as a string without need for authentication, but I am going to take a second look at authenticating using a session token or something using an API attached to the deployment's identity pool.
+
+A quick google search takes me to [this page](https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html) where I can learn a bit more.
+
+Also, I checked my billing for a second and found that Feb cost me $32, much of which came from hosting the Amplify app. That is fine with me for now so I can get the website running.
+
+The article indicates an obstacle to me--you can use getID to get an OpenID token for an unathenticated (guest) user, but you only need the identity ID to do this. That implies there's no point in trying to identify with a third party that someone is logged in as a particular guest user, since anybody can submit any ID and be trusted with some additonal steps. In that case, let's proceed with just using identity ID for now, and authenticating when possible. Once I implement an experience that includes authentication, I can make sure that system verifies people using JWT if they are a real user before doing anything on the user's behalf.
+
+So, let's add user identity ID to the gameStart endpoint. What does that even mean? It means I have to gather the list of players in the lobby and prepare to send them to a stubbed method for the "game start" method on the EC2 instance. Let's do that then! For now I can just print the list of players.
+
+I've coded that up, but I really don't see a reason to deploy it without making the endpoint on the game server first. So let's go ahead with that. I have some other changes to commit too, so I'll organize those first.

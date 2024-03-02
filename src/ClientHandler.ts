@@ -1,9 +1,9 @@
 import { Socket } from 'socket.io';
 import { ControlsChange } from './AnimationUtil';
 import { CharacterStatus } from './CharacterDataInterfaces';
-import CharacterListener from './CharacterListener';
+import GameListener from './GameListener';
 
-export default class ClientHandler implements CharacterListener {
+export default class ClientHandler implements GameListener {
   #socket: Socket;
 
   #characterID: string | undefined;
@@ -70,6 +70,12 @@ export default class ClientHandler implements CharacterListener {
       state: animationState.id,
       healthInfo,
       collisionInfo,
+    });
+  }
+
+  handleGameStart(gameStartTime: Date): void {
+    this.#socket.emit('gameStarting', {
+      gameStartTime,
     });
   }
 
