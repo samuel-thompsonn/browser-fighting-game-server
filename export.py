@@ -8,7 +8,8 @@ zip_target_directories = [
 ]
 
 zip_target_files = [
-    '.env',
+    '.env.development',
+    '.env.production',
     'package.json',
     'tsconfig.json'
 ]
