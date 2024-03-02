@@ -1081,9 +1081,11 @@ The next objective is to set up the API on the EC2 instance for starting a game,
 
 ## 3/1/2024
 
-8:17 pm - 9:13 pm (0h56m)
+8:17 pm - 9:13 pm (0h56m, remaining: 2h4m)
 
-9:38 pm - 
+9:38 pm - 10:13 pm (0h35m, remaining: 1h29m)
+
+10:33 pm - 
 
 What should I be working on today? I laid out some steps for myself last time I worked on the project.
 
@@ -1098,3 +1100,37 @@ The article indicates an obstacle to me--you can use getID to get an OpenID toke
 So, let's add user identity ID to the gameStart endpoint. What does that even mean? It means I have to gather the list of players in the lobby and prepare to send them to a stubbed method for the "game start" method on the EC2 instance. Let's do that then! For now I can just print the list of players.
 
 I've coded that up, but I really don't see a reason to deploy it without making the endpoint on the game server first. So let's go ahead with that. I have some other changes to commit too, so I'll organize those first.
+
+Then I'll put together an HTTP endpoint for the server, called /start-game. The nice way to do this is with `express`, which I have installed already and forgot I was even using to serve a simple HTML page when receiving direct requests. Does it work?
+
+[StackOverflow](https://stackoverflow.com/questions/7172784/how-do-i-post-json-data-with-curl) tells me I can test a simple JSON POST request with cURL:
+
+```
+curl --header "Content-Type: application/json" \
+  --request POST \
+  --data '{"players":['identityId1','identityId2']}' \
+  http://localhost:3000/api/login
+```
+
+I realize this would be easier with ChatGPT but here we are. This didn't work because of Powershell having different syntax, so ChatGPT says I should do this:
+```
+curl -Method Post -Uri "http://localhost:3001/start-game" -Body '{"players": ["identityId1","identityID2"]}' -ContentType "application/json"
+```
+
+I was getting an error where requests had no body. The problem was that I need to use JSON middleware acccording to ChatGPT. Sure enough, that worked. Now let's follow the SOP to export and see if I can make the same request from the API gateway. I expect I'll probably run into a CORS issue, but maybe not!
+
+ChatGPT also has suggestions for how to make a CloudFormation template that auto-deploys my instance and boots up the server, which sounds really nice for setting up and tearing down. I'll implement that once I get done with my current step.
+
+I deployed a syntax error. Silly me. Well, this is at least probably faster than redeploying using a CloudFormation template, even if it's more manual. It looks like the allowed origin URL for the client is undefined, which seems like a problem, so maybe I should look at that. But first let's try a cURL request.
+
+```
+curl -Method Post -Uri "https://game-server.sam-thompson-test-development.link/start-game" -Body '{"players": ["identityId1","identityID2"]}' -ContentType "application/json"
+```
+
+I got a 502 bad gateway error. And clearly something is off because the game server has an undefined port that it's listening on. What's going on with that? It's  because of a typo in .env.production. I fixed it up by looking at the previous parameters in Git history, so hopefull that helps. Time to deploy once more!
+
+And, it worked! That was actually so simple. But also I'm confused why it's searching for index.html sometimes. Is something sending GET requests to the server? It's probably health checks from the load balancer, if I had to guess.
+
+Either way, now I can try connecting up to the API gateway, since the most important thing here is verifying that the parts fit together. It seems to work alright, but I'm noticing that it's printing nothing for the list of players in the request. Why is that?
+
+It's because I needed to use the `json` arg for requests.post in Python. So now I have a bridge between the API gateway and the server up and running, which means it's time to configure the game server to make use of the identity IDs provided, and then make it simpler to deploy.

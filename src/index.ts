@@ -18,8 +18,7 @@ const MILLIS_PER_GAME_LOOP = SECONDS_PER_GAME_LOOP * 1000;
 const MILLIS_FOR_GAME_START = 3000;
 
 // List of players that we expecct to join the game.
-// TODO: Get this information from a database/API.
-const PLAYERS = ['Player 1 Name', 'Player 2 Name'];
+let currentPlayers = ['Player 1 Name', 'Player 2 Name'];
 
 function logVerbose(logText:string) {
   if (VERBOSE) { console.log(logText); } // eslint-disable-line
@@ -73,7 +72,7 @@ function initializeGameModel(): GameInstance {
   const gameID = 0;
   const gameModel = new GameModel(
     gameID,
-    PLAYERS.length,
+    currentPlayers.length,
     onGameStarted,
     onGameComplete,
     onGameTerminated,
@@ -169,10 +168,23 @@ io.on('connection', (socket) => {
 });
 
 app.use(express.static(path.resolve(__dirname, '../public')));
+app.use(express.json());
 
 app.get('*', (req, res) => {
   logVerbose('Received an HTTP GET request for a page!');
   res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
+});
+
+// Example request structure:
+// { players: ['identityID1', 'identityID2']}
+app.post('/start-game', (req, res) => {
+  const { players = [] } = req.body;
+  console.log(`Received an HTTP request, POST to /start-game. req.body: ${JSON.stringify(req.body)}. players.length: ${players.length}`);
+  console.log(`Received an HTTP POST request to /start-game. List of players: ${players}`);
+  currentPlayers = players;
+  res.json({
+    gameID: 0,
+  });
 });
 
 server.listen(PORT, () => {
