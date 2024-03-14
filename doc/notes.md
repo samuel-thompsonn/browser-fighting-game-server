@@ -1085,7 +1085,7 @@ The next objective is to set up the API on the EC2 instance for starting a game,
 
 9:38 pm - 10:13 pm (0h35m, remaining: 1h29m)
 
-10:33 pm - 
+10:33 pm - 12:24 pm (1h51m, remaining: -22 minutes; DONE)
 
 What should I be working on today? I laid out some steps for myself last time I worked on the project.
 
@@ -1134,3 +1134,121 @@ And, it worked! That was actually so simple. But also I'm confused why it's sear
 Either way, now I can try connecting up to the API gateway, since the most important thing here is verifying that the parts fit together. It seems to work alright, but I'm noticing that it's printing nothing for the list of players in the request. Why is that?
 
 It's because I needed to use the `json` arg for requests.post in Python. So now I have a bridge between the API gateway and the server up and running, which means it's time to configure the game server to make use of the identity IDs provided, and then make it simpler to deploy.
+
+How should this be done? We should have mappings between clients, identity IDs, and game instances. And we should start off with no game instances. I also think it would be good to terminate game instances after 10 minutes or so to make sure there's no hanging instances, but I think that could be an optimization. So for now let's focus on decoupling game instances from game worlds themselves, if that makes sense.
+
+I have to leave off now. But here's what to do next:
+
+1) Finish splitting game instance management duties away from index.ts and over to GameInstanceManager.
+2) Come up with a local test verifying the new process of game creation where you
+first create a game with a list of players and then join with those players.
+3) Set up CloudFormation-based EC2 deployment for this server code so we can do things in one AWS-managed command.
+4) Do a demo of the first basic lobby flow (may require modifying some UI in the lobby to require the lobby action API to be working.)
+
+## 3/4/2024
+
+6:23 pm - 6:35 pm
+
+9:47 pm - 10:20 pm
+
+Let's continue splitting out game instance management duties out of index.ts and to GameInstanceManager.
+
+It looks like it will be pretty complicated to manage players joining. But I should have a high-level client handler representing the interface between socket and game server, and then a lower level client handler representing the interface between game instance and client. So I'll make that separation.
+
+The high level one will get a request to join a specific game, which is how we'll route them to the appropriate game instance to spectate or play. That game instance or game instance manager will send them signals about things like game updates. Ideally there should be a separation between game updates particular to the game and those not particular to the game, but I think I might mix those together for now.
+
+So we might have the following interfaces interacting:
+
+1. connection handler: internally defines the responses to sockets. Thinking of this like a method-based HTTP API in a sort of serverless model, it's composed into handlers of individual functions, each of which interacts with a single internal API that manages internal state.
+2. game manager: The API that manages internal state. It should be on the level of a set of game instances.
+
+So what's an example? This feels awfull complicated to think about. But the point is that there are multiple layers and each layer handles all API call types but only needs to know about their own set of them. So if a socket sends a "Join Game with ID X" signal, that is consumed by the outermost layer, but if they send a "Modify input" signal, that is forwarded by the outer layer and consumed by the inner layer.
+
+But note that we can't technically do that since we can't make a handler for just any action. Or can we? We can, actually, but it looks like the better pattern might be this: One class per input. You can actually have multiple listeners to a single input.
+
+## 3/5/2024
+
+9:37 pm - 9:43 pm (6m)
+
+10:18 pm - 10:52 pm (34m, total = 40m)
+
+11:43 pm - 12:02 am (19m, total = 59m)
+
+12:03 am - 12:24 am (21m, total = 1h20m)
+
+I need to actually decide what the low-level code pattern will  be for the websocket handlers. Since it's a tough decision, I'm favoring just going for giving one set of handlers access to a high-level external API and one set of handlers access to a low-level API (specific to the game). Then I can initialize them when the server starts in order to route requests.
+
+So let's get started with it, using the JoinGame route.
+
+Next question: How do I make the interface for adding a player to a game without requiring JoinGame to know about the specific methods that a listener needs to have? Well, I guess it's reasonable for the game type to know about the methods that need to be on a listener, so it can manage the type. In that case, I just need to pass to the game the parameters necessary to instantiate a listener. So that probably means passing the socket itself, which means I need to have a socket to hand to the game.
+
+I <3 beeps -annie <---- I love you too!
+
+So here's how it will be:
+
+- JoinGame passes player wrapper (with methods for sending messages) and game id to GameServer
+- GameServerImpl passes player id + socket to the GameInstance
+- GameInstanceImpl passes player id + socket to GameModel
+- GameModelImpl uses a factory it owns to instantiate a GameModelListener that can handle the game-specific signals
+
+## 3/7/2024
+
+8:55 pm - 9:56 pm (1h1m, total this week is 2h20m)
+
+I should be able to pick up approximately where I left off. But I regret smashing up the existing functionality in the process. It will be okay, though!
+
+I managed to set up a working socket server that lets me plug in handlers and have them access the game server API. Excellent! Next I need to wire the endpoints back up so that they communicate with the server. Ideally I might try getting rid of the listener structure so that the game instance doesn't have to maintain references to clients that might have died.
+
+## 3/12/2024
+
+10:25 pm - 12:46 am (2h21m)
+
+Where did I leave off? What do I do next? I need to wire the endpoints so they communicate with the game server. What's an example of the kind of user flow / input we're expecting and we'd like to handle?
+
+1. LAAPI sends start game request, and we start a game
+2. Player with id X joins
+3. Player X uses websocket API to join game A.
+4. Player X starts sending controls inputs.
+5. Player Y uses websocket API to join game A.
+6. Player Y starts sending controls inputs.
+7. websocket API sends X and Y the 'game about to start' signal
+8. Players X and Y send controls signals until game complete
+9. websocket API sends X and Y game complete and game termination signals
+
+Most if not all of these endpoints already exist, so let's translate them to our new system! We should start with the start-game request, but I'll skip it for now since that's not thet websocket API and it requires some design of its own.
+
+So, what are all the endpoints that appear in the above model?
+
+- joinGame: Joins the game as a spectator or player; we determine which.
+- controlsChange: Sends a change to the controls.
+  - This can actually be on the game server API side of things--as long as we are a transparent layer with respect to the data for the controls. Controls changes could really mean anything, and we can leave it to the client/game connection to handle that.
+- createCharacter, resetGame: We don't need these, they can be handled by joinGame.
+
+So really all we're missing is a mechanism for the ControlsChange message handler to send the controls information to the game instance. Let's make that happen!
+
+So here's an interesting question: should the Game Server API be implemented through the individual actions of message handlers, or should it be an API itself that gets called by the individual handlers? I'm still feeling that it would be best to call the handlers. And, in fact, we can maximize the level of abstraction (and therefore hopefully simplify each part) by giving one layer to interact with.
+
+The only concern is that this sort of trivializes the role of the message handlers, as they essentially are just a mapping between socket ids and methods on the GameServer API.
+
+To make this into something we can verify through some kind of integration test (or manual test), let's quickly make sure we have something down for the start-game HTTP endpoint.
+
+I've made some great progress toward actual functionality, and I have a test client that lets me test things in a more fine-tuned manner. So what comes next for me? Probably making a full test case (either an SOP or an actual piece of code) that tells me if the full process is working as I described above. That will mainly involve setting up the internal game instance manager API for the game instance to push messages to clients, and putting something on the frontend to detect it. But then I think we'll be in a good situation to integrate with the identity pool for verifying players can join a game, and then we really will have everything working together.
+
+## 3/13/2024
+
+9:40pm - 
+
+So, what do I want to do now? I want to make a test client that lets me run an entire test SOP, and then I want to make it work. What should be the test SOP? Maybe I can make an automatic client. I'll give that a thought and update Windows.
+
+1. Load client (not necessary for integ test)
+2. Establish websocket connection
+3. Send a 'start game' signal from an authoritative source
+4. Send a 'join game' signal with the game as the target
+5. Do this with two clients, expect game start signal on each client.
+6. Expect controls updates on each client.
+7. Internally cause the game to finish somehow?
+8. Expect game complete and game terminated signals on each client 
+
+This is all a nice test. But does it accomplish my goal of mapping players to game instances? Maybe and maybe not, but the point is that this flow should work for me when I'm done.
+
+There's some socket.io [documentation](https://socket.io/docs/v4/testing/) for test setup with Jest, so maybe I can try that out for a bit.
