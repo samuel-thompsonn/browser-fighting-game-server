@@ -1,14 +1,15 @@
-import { ControlsChange } from './AnimationUtil';
+import { GameID } from './GameInterfaces';
 import GameListener from './GameListener';
+import Client from './client/Client';
 
 interface GameInstance {
   updateGame: (elapsedSeconds: number) => void;
-  getID: () => number;
-  createCharacter: () => string;
+  getID: () => GameID;
   removeCharacterListener(listener: GameListener): void
-  updateCharacterControls(characterID: string, controlsChange: ControlsChange): void
+  updateCharacterControls(characterID: string, controlsChange: object): void
   removeCharacter(characterID: string): void
-  addGameListener(listener: GameListener): void
+  addPlayer(client: Client): void
+  handlePlayerForfeit(playerID: string): void;
 }
 
 export default GameInstance;

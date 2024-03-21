@@ -9,3 +9,5 @@ export interface CollisionEvent {
   firstEntity: CollisionMember;
   secondEntity: CollisionMember;
 }
+
+export type GameID = string;

@@ -1236,7 +1236,7 @@ I've made some great progress toward actual functionality, and I have a test cli
 
 ## 3/13/2024
 
-9:40pm - 
+9:40pm - 11:56 pm (2h16m, total this week 4h37m. TIME SATISFIED for the week)
 
 So, what do I want to do now? I want to make a test client that lets me run an entire test SOP, and then I want to make it work. What should be the test SOP? Maybe I can make an automatic client. I'll give that a thought and update Windows.
 
@@ -1252,3 +1252,71 @@ So, what do I want to do now? I want to make a test client that lets me run an e
 This is all a nice test. But does it accomplish my goal of mapping players to game instances? Maybe and maybe not, but the point is that this flow should work for me when I'm done.
 
 There's some socket.io [documentation](https://socket.io/docs/v4/testing/) for test setup with Jest, so maybe I can try that out for a bit.
+
+And now I officially have a test case that works and involves two-way communication. This is excellent, and I quite like my method for two way communication that passes a uniform interface instead of individual objects for sending messages--it's quite clean.
+
+So what comes next? Well, I should make a test case that starts the game and checks the HTTP response, and I should also try and connect to that game as a player. This might require us to set up player IDs instead of socket IDs, but that's test-driven development! Right now the test-driven development is leading me to define a method for assigning a player identity sent by the player to the socket. How would I do that?
+
+I think in this case it's really best to model the actual network calls going to the server, which means I should extract the contents of main() in index.ts to a sort of ExternalestGameServer interface. I was thinking about adding an HTTP interface for clients to join the game, and I might yet, but that requires making a distinction between the start-game endpoint being unavailable to clients while the join-game endpoint would be available, and I'd rather configure that later.
+
+Ah whatever, that won't be impossible. Let's do it. And we can just validate that there already exists a socket connection with the player who is trying to join. But actually the minimum case really has no need for a response to the joinGame request, so I'll just start with a test that verifies the game starts when both players join. And for now, I'll add a playerID parameter to joinGame, and then I will implement the mechanism for the game instance sending 'joinGame' message to players, which is going to be interesting.
+
+Okay--where did I leave off? I was trying to get the "game that includes one player" case to pass. I had set up a whole pipeline to get messages from the game model to the socket clients, but I need to reconcile the problem where player IDs are socket IDs in the codebase but I want them to be user-submitted IDs. So I'll solve that in a non-authenticating way next time I pick up, and then I'll debug.
+
+## 3/15/2024
+
+7:20 pm - 8:32 pm (1h12m, weekly total 5h49m)
+
+I will continue crafting tests using the integration test suite and use them on the server. I realize now that I don't have to encapsulate the entire server logic in index.js--I just have to actually run the server in one terminal and have the integration tests connect to its address in a second terminal instance. Let's try that!
+
+I tried it and it works great, so I updated the README with some info on how to run the tests in the new style. But apparently the tests are breaking because I don't send a target game ID for the game to join, so now I should figure that out. That's because I no longer grab game ID from the game server directly, so I need to figure out how the client is supposed to obtain game ID. I'm pretty sure the design says they should get it through the /start-game interface, and that the LAAPI is in charge of this. But I guess I'll just send a POST request to /start-game in the unit test.
+
+I got an error `ReferenceError: fetch is not defined` when trying to use fetch, and it seems it's because fetch isn't out-of-the-box for my Node version (https://github.com/mswjs/msw/issues/686). So I can install node-fetch with `npm install --save-dev node-fetch` and import it in Jest. But apprently that doesn't work for node-fetch 3.x so I am just using node-fetch 2 for now in package.json and that seems to work. But there's a lot of saltiness on GitHub https://github.com/node-fetch/node-fetch/discussions/1503.
+
+Now I can go back to figuring out why the player doesn't get a game-start notification. The bug is that there are 0 players necessary to start the game but we have 1. Why are there 0 players necessary to start the game? Because I didn't make the test correctly send the JSON data to the client (I forgot the JSON content type header). After some more tribulations, it works! I now have a test case where a game is being created and a client is joining it. Next I should have a situation where two separate clients need to join to start the game, since that is the minimum game instance that can actually make sense. After that I can start messing around with character controls, perhaps even verifying that they modify the game state.
+
+## 3/18/2024
+
+10:37 pm - 11:13 pm (36m, 36m total this week)
+11:25 pm - 12:17 am (52m, 1h28m total this week)
+
+I figured I should realign with the overall objective for a second here. I'll run the client and see how it interacts with the server in its current state. I figure what we're missing is a mechanism for providing updates to the client about gamestate. But I can't even get to the local game server because the lobby screen relies on the prod LA API to start the game, which probably can't contact the game server because it's not running. So, can I use a URL? I should be able to send a 'start-game' signal directly to the game server to test this, but that feels like it's against the point. So I'll go back to the integration test for now to check that we get game updates.
+
+So, what do we modify to send character updates? The same thing we modified to send the 'startGame' message. That means adding the method to GameInstanceManagerInternal for updating a specific character. But I'll just make a generic method with unknown schema for sending a 'game status update' and let the client figure out the rest. Right now it looks like characters send updates to GameListener entites, but to minimize interaction bypassing interfaces I should just make the GameModel act as the 'GameListener' and make the interface a 'CharacterListener' interface. The only method it needs is `handleCharacterUpdate`.
+
+Now I've got the message routing working, but the game server isn't actually driving the game instances! So now I need to add the system for driving the game instances. So--who should own the logic for the # seconds delay between all players joining the game and the game actually starting? I think maybe it should be the game rather than the instance manager, which makes things very simple for the instance manager.
+
+So I got that working and I officially have games controlling their own delays before game start. This makes things pretty versatile, since now I can potentially even do things like send updates prematurely for intro animations. My new mistake is that I forgot to actually plug in the GameModel as a listener to its characters, and I forgot to create characters for clients who are part of the game. Now I do that, but I provide socket ID as the player ID to the game instance, whereas I should provide player ID. How do I set that up? I did it by setting up a handshake that sends player ID, and that will be where I can tie in authentication!
+
+But now I have a full test case where players join a game, the game starts, and we get status updates. Nice! Next I should make a test case for players sending controls updates to characters and having some kind of in-game value change like position. And lastly we can set up the game end condition (probably with a debug "forfeit" message) to verify that it's working as expected. Then we'll be ready to do a Prod/Beta test where we upload the server code again. I'm happy that the progress is measurable.
+
+## 3/19/2024
+
+8:54 pm - 9:40 pm (0h46m, 2h14m total this week)
+
+As stated yesterday, my next move is to make a test case for payers sending controls updates to the game and having the player position or animation change. But first I'll take a moment to split up the 'two player game' test into sections.
+
+Okay--I think I've set up the test. Now, why does the character not move to the right when we send the 'moveRight' 'pressed' control update? This probably requires some logging sleuthing.
+
+## 3/20/2024
+
+Let's continue with the investigation to see why the character controls update doesn't change their x position in 5 seconds. But first let's quickly restart my computer to see if we can get rid of the keyboard issues I've been having.
+
+Okay, I'm back. So, what fires? Well, I can start by re-running the tests--I think I turned off the logging for the 30 fps updates so I shouldn't be bombarded. I had to remove just a couple extra messages.
+
+It looks like the problem is that we're sending an undefined controlsChange. How come? It's because I formatted the message less deeply than I was supposed to.
+
+The next problem is that we can't derive the character associated with the player ID on the controls update. So let's fix that. Should a character have the same ID as its player? I think so, and I see no reason in complicating anything by decoupling the two concepts.
+
+Looking at the logs, it seems the controls change definitely caused a deltaPosition to appear. Why is it not reflecting in the position for the character?
+
+Well, it's likely now that we're not actually reading the right character ID, which is why we're now failing 2 test cases instead of 1. So let's try reading the correct character ID, which is the player ID.
+
+I've found it! The reason the test was failing was because my original handler was still working. Every time I got an update from the game server, I wrote the x position to `characterStartingX` with the first handler, then compared the value in the second handler, which meant they were always equal. How do I fix this? Just by doing a check for `undefined`. And after fixing that, the tests pass! Excellent, now I can move on to a test for getting signals when the game ends. Let's have forfeiting be a signal at the GameServer level so that it's not just controls.
+
+Wow--it worked! So now I pretty much have an end-to-end situation where a game is completed successfully, which means we can deliver the user experience. So I think the next thing we should do is upload the server code and use it in concert with the LAAPI and client to get us a full lobby experience. Exciting!
+
+But before that I think it would be clean to do two things:
+
+1) make sure the game instance can terminate itself so we don't have memory/compute leaks.
+2) commit all this now that we're back in a working game state.

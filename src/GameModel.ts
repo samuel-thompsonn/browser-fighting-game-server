@@ -6,6 +6,11 @@ import characterASimple from './character_files/characterASimpleSymmetrical.json
 import GameInstance from './GameInstance';
 import SimpleCharacterFileReader from './SimpleCharacterFileReader';
 import GameInternal from './GameInternal';
+import { GameID } from './GameInterfaces';
+import GameInstanceManagerInternal from './game_instance_manager/GameInstanceManagerInternal';
+import Client, { PlayerID } from './client/Client';
+import CharacterListener from './CharacterListener';
+import { CharacterStatus } from './CharacterDataInterfaces';
 
 const STAGE_WIDTH = 350;
 const STAGE_X_OFFSET = -50;
@@ -13,6 +18,9 @@ const STAGE_X_OFFSET = -50;
 function applyCharacterMovement(deltaPositions: Map<Character, Position>): void {
   deltaPositions.forEach((deltaPosition: Position, character: Character) => {
     const currentPosition = character.getPosition();
+    if (character.getCharacterID() === 'PlayerID1') {
+      // console.log(`deltaPosition for character PlayerID1: ${JSON.stringify(deltaPosition)}`);
+    }
     character.setPosition({
       x: currentPosition.x + deltaPosition.x,
       y: currentPosition.y + deltaPosition.y,
@@ -35,8 +43,8 @@ function getCharacterPosition(
   };
 }
 
-export default class GameModel implements GameInstance, GameInternal {
-  #numExpectedCharacters: number;
+export default class GameModel implements GameInstance, GameInternal, CharacterListener {
+  #expectedPlayers: string[];
 
   #characters: Map<string, Character>;
 
@@ -46,34 +54,50 @@ export default class GameModel implements GameInstance, GameInternal {
 
   #gameListeners: Set<GameListener>;
 
+  #playersAndSpectators: Set<PlayerID>;
+
   #gameComplete: boolean;
 
-  #onGameStarted: (gameInstance: GameInstance) => void;
+  #id: GameID;
 
-  #onGameComplete: (winnerID: string) => void;
+  #gameInstanceManagerInternal: GameInstanceManagerInternal;
 
-  #onGameTerminated: (gameInstance: GameInstance) => void;
-
-  #id: number;
+  // Could also be gameState as an enum of NOT_STARTED, STARTED, COMPLETE
+  #active: boolean;
 
   constructor(
-    id: number,
-    numExpectedCharacters: number,
-    onGameStarted: (gameInstance: GameInstance) => void,
-    onGameComplete: (winnerID: string) => void,
-    onGameTerminated: (gameInstance: GameInstance) => void,
+    id: GameID,
+    expectedPlayers: PlayerID[],
+    gameInstanceManagerInternal: GameInstanceManagerInternal,
   ) {
-    this.#numExpectedCharacters = numExpectedCharacters;
+    // TODO: Extract logic for managing player count
+    //   to game instance manager
+    this.#expectedPlayers = expectedPlayers;
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
     this.#gameListeners = new Set<GameListener>();
-    this.#gameListeners = new Set<GameListener>();
-    this.#onGameStarted = onGameStarted;
-    this.#onGameComplete = onGameComplete;
-    this.#onGameTerminated = onGameTerminated;
+    this.#playersAndSpectators = new Set<PlayerID>();
     this.#gameComplete = false;
     this.#id = id;
+    this.#gameInstanceManagerInternal = gameInstanceManagerInternal;
+    this.#active = false;
+  }
+
+  addPlayer(client: Client) {
+    console.log(`Game ID: ${this.#id} | Adding player ${client.getPlayerID()}`);
+    this.#playersAndSpectators.add(client.getPlayerID());
+    console.log(`Game ID: ${this.#id} | There are now ${this.#playersAndSpectators.size} players spectating or participating. Number of players needed to start the game: ${this.#expectedPlayers.length}`); // eslint-disable-line
+    if (this.#expectedPlayers.includes(client.getPlayerID())) {
+      // TODO: Assign character ID to player ID so that controls are routed appropriately
+      this.#characters.set(client.getPlayerID(), this.#createCharacter(client.getPlayerID()));
+    }
+    if (this.#playersAndSpectators.size === this.#expectedPlayers.length) {
+      console.log(`Game ID: ${this.#id} | All players connected. Starting the game...`);
+      // TODO: Send timer for game start time instead of starting game immediately
+      this.#gameInstanceManagerInternal.onStartGame(this.#id);
+      this.#active = true;
+    }
   }
 
   getID() {
@@ -87,43 +111,29 @@ export default class GameModel implements GameInstance, GameInternal {
     this.#pendingMovement.get(character)?.push(deltaPosition);
   }
 
-  addGameListener(listener: GameListener): void {
-    this.#gameListeners.add(listener);
-    this.#characters.forEach((character) => {
-      character.subscribe(listener);
-    });
-  }
-
   removeCharacterListener(listener: GameListener): void {
     this.#gameListeners.delete(listener);
   }
 
-  createCharacter(): string {
-    console.log(`Game ID: ${this.#id} | Creating new character`);
-    // if the game has already started, do not admit characters.
-    if (this.#characterCounter >= this.#numExpectedCharacters) {
+  #createCharacter(characterID: string): Character {
+    if (this.#active) {
       console.log(`Game ID: ${this.#id} | Cannot create new character because there are already ${this.#characterCounter} characters.`);
       throw new Error('Failed to create a character: The game has already started!');
     }
-    const characterID = `${this.#characterCounter}`;
+    console.log(`Game ID: ${this.#id} | Creating new character`);
     const characterTemplate = SimpleCharacterFileReader.readCharacterFile(characterASimple);
+    // TODO: Probably want to remove characterCounter and just use this.#characters.size
     const newCharacterPosition = getCharacterPosition(
       this.#characterCounter,
-      this.#numExpectedCharacters,
+      this.#expectedPlayers.length,
       STAGE_WIDTH,
       STAGE_X_OFFSET,
     );
-    const newCharacter = characterTemplate.createCharacter(characterID, newCharacterPosition);
-    this.#gameListeners.forEach((listener) => {
-      newCharacter.subscribe(listener);
-    });
-    this.#characters.set(characterID, newCharacter);
     this.#characterCounter += 1;
+    const newCharacter = characterTemplate.createCharacter(characterID, newCharacterPosition);
+    newCharacter.subscribe(this);
     console.log(`Game ID: ${this.#id} | There are now ${this.#characters.size} characters in the game.`); // eslint-disable-line
-    if (this.#characterCounter === this.#numExpectedCharacters) {
-      this.#onGameStarted(this);
-    }
-    return characterID;
+    return newCharacter;
   }
 
   removeCharacter(characterID: string): void {
@@ -134,9 +144,17 @@ export default class GameModel implements GameInstance, GameInternal {
     console.log(`There are now ${this.#characters.size} characters.`); // eslint-disable-line
   }
 
-  updateCharacterControls(characterID: string, controlsChange: ControlsChange) {
+  /**
+   * Assumes that the incoming message is a controlsChange
+   * @param characterID ID of the character whose controls changed
+   * @param controlsChange The description of changed keys
+   */
+  updateCharacterControls(characterID: string, controlsChange: ControlsChange): void {
     const targetCharacter = this.#characters.get(characterID);
-    if (!targetCharacter) { return; }
+    console.log(`GameModel: Updating character controls. characterID: ${characterID}. controlsChange: ${JSON.stringify(controlsChange)}. targetCharacter: ${targetCharacter}`);
+    if (!targetCharacter) {
+      return;
+    }
     targetCharacter.updateControls(controlsChange);
   }
 
@@ -206,8 +224,8 @@ export default class GameModel implements GameInstance, GameInternal {
 
   #handleGameComplete(winner: Character): void {
     if (!this.#gameComplete) {
-      this.#onGameComplete(winner.getCharacterID());
-      setTimeout(() => this.#onGameTerminated(this), 5000);
+      this.#gameInstanceManagerInternal.onGameComplete(this.#id, winner.getCharacterID());
+      setTimeout(() => this.#gameInstanceManagerInternal.onGameTerminated(this.#id), 5000);
     }
     this.#gameComplete = true;
   }
@@ -220,10 +238,40 @@ export default class GameModel implements GameInstance, GameInternal {
   }
 
   updateGame(elapsedSeconds: number): void {
+    console.log('Running game update loop.');
+    if (!this.#active) {
+      return;
+    }
     this.updateCharacters(elapsedSeconds);
     const deltaPositions = this.getCharacterPositionChanges();
     this.registerCollisions(deltaPositions);
     applyCharacterMovement(deltaPositions);
     this.#handleEndConditions();
+  }
+
+  handleCharacterUpdate({
+    characterID,
+    animationState,
+    direction,
+    position,
+    healthInfo,
+    collisionInfo,
+  }: CharacterStatus): void {
+    this.#gameInstanceManagerInternal.onUpdateGameState(this.#id, {
+      id: `${characterID}`,
+      direction,
+      position,
+      state: animationState.id,
+      healthInfo,
+      collisionInfo,
+    });
+  }
+
+  handlePlayerForfeit(playerID: string): void {
+    console.log(`PLayer ${playerID} forfeited.`);
+    // count their character as defeated.
+    // if that ends the game, the end game logic should handle it.
+    // for now, we can just hack it by setting thier health to 0.
+    this.#characters.get(playerID)?.setCurrentHealth(0);
   }
 }

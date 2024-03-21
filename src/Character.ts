@@ -10,12 +10,12 @@ import {
   CharacterDimensions,
 } from './CharacterFileInterface';
 import { CharacterStatus, ResolvedCollisionEvent } from './CharacterDataInterfaces';
-import GameListener from './GameListener';
 import { CollisionEvent } from './GameInterfaces';
 import GameInternal from './GameInternal';
 import CharacterInternal from './CharacterInternal';
 import InteractionInfo from './state_interaction/InteractionInfo';
 import CollisionEntity from './CollisionEntity';
+import CharacterListener from './CharacterListener';
 
 function getAnimationStateID(animationName: string, orderIndex: number) {
   return `${animationName}${orderIndex + 1}`;
@@ -39,7 +39,7 @@ export default class Character implements CharacterInternal {
 
   #currentState: AnimationState;
 
-  #listeners: GameListener[];
+  #listeners: CharacterListener[];
 
   #position: Position;
 
@@ -132,6 +132,7 @@ export default class Character implements CharacterInternal {
   }
 
   updateControls({ control, status }: ControlsChange): void {
+    console.log('Character is processing controls update.');
     this.#controlsMap.set(control, status === 'pressed');
   }
 
@@ -189,7 +190,7 @@ export default class Character implements CharacterInternal {
     this.#setState(this.#nextStateID);
   }
 
-  subscribe(listener: GameListener) {
+  subscribe(listener: CharacterListener) {
     this.#listeners.push(listener);
     this.#notifyListener(listener);
   }
@@ -315,7 +316,7 @@ export default class Character implements CharacterInternal {
    * Notifies a listener of the current state
    * @param listener The listener to notify of the current state
    */
-  #notifyListener(listener: GameListener): void {
+  #notifyListener(listener: CharacterListener): void {
     // TODO: Turn the collision entities back into something that is JSON
     // serializeable. Or make a serializer either inside the CollisionEntity
     // class or without. Probably inside right?
