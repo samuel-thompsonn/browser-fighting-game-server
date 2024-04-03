@@ -6,7 +6,7 @@
     "@dotenvx/dotenvx": "^0.15.3",
     "@types/express": "^4.17.13",
     "@types/node": "^16.11.20",
-    "cors": "2.8.5",
+    "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "4.17.2",
     "socket.io": "^4.4.1"

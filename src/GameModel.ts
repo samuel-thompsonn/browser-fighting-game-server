@@ -238,7 +238,6 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
   }
 
   updateGame(elapsedSeconds: number): void {
-    console.log('Running game update loop.');
     if (!this.#active) {
       return;
     }

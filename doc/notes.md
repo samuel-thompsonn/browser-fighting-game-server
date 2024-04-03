@@ -1300,6 +1300,8 @@ Okay--I think I've set up the test. Now, why does the character not move to the 
 
 ## 3/20/2024
 
+6:45 pm - 8:03 pm (1h18m, 3h32m total this week)
+
 Let's continue with the investigation to see why the character controls update doesn't change their x position in 5 seconds. But first let's quickly restart my computer to see if we can get rid of the keyboard issues I've been having.
 
 Okay, I'm back. So, what fires? Well, I can start by re-running the tests--I think I turned off the logging for the 30 fps updates so I shouldn't be bombarded. I had to remove just a couple extra messages.
@@ -1320,3 +1322,116 @@ But before that I think it would be clean to do two things:
 
 1) make sure the game instance can terminate itself so we don't have memory/compute leaks.
 2) commit all this now that we're back in a working game state.
+
+Now I've done both of those things, and I really ought to upload my changes before I lose them in some freak accident. Don't intend to jinx it though :).
+
+I suppose I could also try to contrive a way to test this offline with the client. But I feel like I'm at a decent stopping point since I'm having trouble focusing.
+
+## 3/26/2024
+
+10:10 pm - 10:21 pm (11 minutes)
+
+Okay, I pushed my changes and now I have everything safe and secure. The next step ought to be to upload the server code to an EC2 instance and test everything together. But I know that I made some changes to the way the client talks to the server--mainly through the introduction of the identification handshake--so I should develop that locally.
+
+But the problem is that in the current control flow, the client needs to get through the lobby action API to connect to the server, so I can't actually get the server starting up. But I can solve that by just adding some debug controls to the client, so I think I'll give that a try. I can just gate the debug controls with a query parameter if I want them not to be there for users.
+
+So let's start by just running through the client experience and see what needs to change to re-enable local development.
+
+The current blocker is that I hit a 500 error when I press the 'Start Game' button, which makes sense because the game server isn't online right now. So I just need an option to bypass this and use the local server instead. Simple enough.
+
+## 3/27/2024
+
+8:25 pm - 8:56 pm (31 minutes)
+9:15 pm - 10:32 pm (1h17m)
+10:42 pm - 10:49 pm (7m, total 2h6m this week)
+
+So--I hit a 500 error from the LA API (not LAWS) when I click 'Start Game'. I need to bypass the LA API. So I'll add a checkbox that appears only when a debug flag is set to true, and the checkbox switches us over to directly calling the game server API's start-game method.
+
+Now I've got the game loop active, but for some reason we're sending an undefined game start time and never actually running the game loop within the model. Why? It's because I don't send a game start time from the server to the client, since I just start the game instantly for now. I need to add some data flow controlling that.
+
+The next issue I'm facing is that the game ID is set to 1241 on the client uniformly. Where did that come from? It came from me hard-coding it right there in the code. Fixed that.
+
+Next issue is that apparently I was sending an empty players list to the game server. I guess I formatted the message incorrectly. And I'm also apparently not passing the gmae start time properly either, I think. The first issue is probably because I wasn't using the content-type header. That indicates that fetch is too low-level of a tool, honestly.
+
+Now I've messed up the HTTP request to the serverr--it's coming back wtih some sort of error for CORS reasons. What did I even put in the request before to make it work alright, and why isn't it working now? I put `mode: 'cors'`. I'm very lost--I don't understand what I changed to cause this problem. But how is this a CORS issue if the server isn't even receiving the request??
+
+The problem doesn't happen if I use the following for the request:
+```
+const startGameResponse = await fetch('http://localhost:3001/start-game', {
+  method: 'POST',
+  body: JSON.stringify(requestBody),
+})
+```
+
+...But the server doesn't actually get the data in the body. But the problem starts when I add the header indicating that I'm sending JSON. Then it just totally rejects my request before it even reaches my code. That's really annoying! How do you send a fetch request to a local server for POSTing JSON data? I don't even know!
+
+Well then, for now I guess I'll just pretend the request works and put a FIXME so I can move on and think of the correct answer later. Even when I set mode to 'no-cors', which presumably bypasses all the CORS craziness, it STILL fails to send the player data. Maybe I have the data schema wrong for the request data?
+
+Once I hacked that together, I managed to get into the game, where my character was immediatetly the victor because there was only one player--pretty boring. So next I should make a debug mechanism for logging in using a custom player ID and test a game with multiple players.
+
+Where did I leave off?
+- Solve the issue with the POST request not being recognized by the server
+- Finish the process for sending debug identity and join game signals from client UI, to run full game demo.
+
+## 3/31/2024
+
+3:54 pm - 4:54 pm (1 hour, weekly total 3h6m. Good!)
+
+Let's solve the issue with the POST request not being recognized by my server. So first let's replicate the issue.
+
+ChatGPT handily answered my question! The problem is that I was lacking middleware on the Node side for parsing the request JSON. So I need to get `body-parser` and use it in the app.
+
+But it turned out I actually had JSON body parsing configured already--the problem was that I didn't have CORS configured to properly handle the pre-flight request. Once I got that working, it went without a hitch. Nice!
+
+Current scenario that I'm trying to get to work:
+
+1. close all client tabs
+2. ensure server isn't running
+3. run the server
+4. open client tab 1
+5. on client tab 1, join the dev lobby
+8. on client tab 1, enable debug mode, ready up, and start game
+9. on client tab 1, send your identity as PlayerID1
+10. on client tab 2, join game
+11. open client tab 2 by navigating to the URL for client tab 1
+12. on client tab 2, send your identity as PlayerID2
+13. on client tab 2, join game
+14. verify that this starts the game
+15. verify that things looks good on the frontend
+
+Right now I'm running into an issue where the image being rendered by the client is apparently broken. What's going on with that? It probably has something to do with the server sending invalid player states, so I'll want to fix that. I am able to replicate it with these steps:
+
+1. close all client tabs
+2. ensure server isn't running
+3. run the server
+4. open client tab 1
+5. on client tab 1, join the dev lobby
+6. on client tab 1, enable debug mode, ready up, and start game with lobby players ['PlayerID1']
+7. on client tab 1, send your identity as PlayerID1
+8. on client tab 1, join game
+9. verify that this starts the game
+10. verify that things looks good on the frontend
+
+## 4/2/2024
+
+9:40 pm - 9:50 pm
+
+10:00 pm - 10:20 pm
+
+Where did I leave off? Looks like I have an error in client-server communication. Let's see the error messages and find out if we can get to the bottom of it.
+
+The error I'm getting is `CanvasRenderingContext2D.drawImage: Passed-in image is "broken"` at DrawableGameCanvasImpl line 65. Let's see. Did we switch around some filepaths that invalidate an import for the image? Or possibly we don't include it in the static assets since I changed how the Express server is constructed?
+
+It looks like the problem starts with the loading screen, when we render an image with source `"../gui/loading_screen_placeholder.webp"`. So what would happen if we just rendered that one image as an img tag? The first thing I notice is that nothing actually draws, so I figure that's part of the issue. What happens if we replace the image? I also notice that when I mouse over the image element in the DOM, it says 'Could not load the image'. Is there a corresponding network call? Yes, and it seems to call to localhost:3000/game/gui/loading_screen_placeholder.webp, so that seems like a problem. When do we even draw the loading screen?
+
+It's not a problem with the image--the same thing happens if we use the Street Fighter background image as the loading screen instead. What's going on here?
+
+The URLs were messed up apparently--that's confusing. But apparently this doesn't work: `"../gui/loading_screen_placeholder.webp"` while this does: `'/gui/loading_screen_placeholder.webp'`. Good to know.
+
+Now I just need to fix up the part that loads the character sprites since they are experiencing the same issue. I found it and just removed the leading ".." and now all the sprite loading works. Nice! What comes next? Probably the two-player local example.
+
+The two-player example seems to be working as well, but I don't seem to be able to get the character to move or attack with my controls. Why? I can start by looking in the controls handler to see if we're even receiving player input. Actually, it looks like we already log that, so maybe the problem is in the client. Yep, looks like we send as a different message type. Actually that's not the problem on further inspection--it's really that we don't send the controls with the correct schema.
+
+And with that change done, we were able to complete one game instance in its entirety. Now I just need to make the client redirect back to the lobby upon receiving a game termination signal. Well, maybe I don't need that, but I at least need a button that will take the player back to the lobby, even if the game provides a debrief screen of some sort. But I already have that--does it work? Yes it does.
+
+I then tested the flow for playing multiple games in a row, and it seems to work fine if we get the same players to boot into a subsequent game. Nice! Does that leave me anything to do before I put the server code online and give it a go? I don't think so. So let's stop being so afraid of putting it online in that case!

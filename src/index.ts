@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import cors from 'cors';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import path from 'path';
@@ -30,13 +31,15 @@ function setUpStartGameEndpoint(app: Express, gameServer: GameServer) {
   app.post('/start-game', (req, res) => {
     const { players = [] } = req.body;
     console.log(`Received an HTTP request, POST to /start-game. req.body: ${JSON.stringify(req.body)}. players.length: ${players.length}`);
-    console.log(`Received an HTTP POST request to /start-game. List of players: ${players}`);
+    console.log(`List of players: ${players}`);
     // TODO: Authenticate players if they are authenticated users
     const gameID = gameServer.createGameInstance(players);
     console.log(`Sending response to startGame. gameID=${gameID}`);
-    res.json({
-      gameID,
-    });
+    res
+      .header('Access-Control-Allow-Origin', '*')
+      .json({
+        gameID,
+      });
   });
 }
 
@@ -44,6 +47,7 @@ function main() {
   const app = express();
   app.use(express.static(path.resolve(__dirname, '../public')));
   app.use(express.json());
+  app.use(cors());
   const socketServer = new SocketAPIImpl();
   const gameServer: GameServer = new GameServerImpl(socketServer);
   setUpStartGameEndpoint(app, gameServer);

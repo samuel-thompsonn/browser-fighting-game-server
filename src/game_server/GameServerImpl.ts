@@ -64,7 +64,7 @@ class GameServerImpl implements GameServer, GameInstanceManagerInternal {
     // The logic for determining whether they're an element of the game
     // may belong to the game instance though.
     const targetGame = this.#gameInstances.get(gameID);
-    console.log(`GameServerImpl: Player ${gameID} attempted to join game ${gameID}. Target game exists: ${!!targetGame}`);
+    console.log(`GameServerImpl: Player ${client.getPlayerID()} attempted to join game ${gameID}. Target game exists: ${!!targetGame}`);
     if (targetGame) {
       // TODO: If a client switches from one game ID to another, they should be removed from
       // the first game ID and we need to notify the target server.
@@ -110,7 +110,7 @@ class GameServerImpl implements GameServer, GameInstanceManagerInternal {
 
   onStartGame(gameID: GameID): void {
     console.log(`Starting game with game ID ${gameID}. Players in game: ${this.#getPlayersForGame(gameID)}`);
-    this.#broadcastToPlayers(gameID, 'startGame');
+    this.#broadcastToPlayers(gameID, 'startGame', { gameStartTime: new Date() });
   }
 
   onUpdateGameState(gameID: string, data: unknown): void {
