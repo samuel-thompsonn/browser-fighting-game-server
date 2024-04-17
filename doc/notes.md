@@ -1418,6 +1418,8 @@ Right now I'm running into an issue where the image being rendered by the client
 
 10:00 pm - 10:20 pm
 
+10:35 pm - 12:32 am
+
 Where did I leave off? Looks like I have an error in client-server communication. Let's see the error messages and find out if we can get to the bottom of it.
 
 The error I'm getting is `CanvasRenderingContext2D.drawImage: Passed-in image is "broken"` at DrawableGameCanvasImpl line 65. Let's see. Did we switch around some filepaths that invalidate an import for the image? Or possibly we don't include it in the static assets since I changed how the Express server is constructed?
@@ -1435,3 +1437,222 @@ The two-player example seems to be working as well, but I don't seem to be able 
 And with that change done, we were able to complete one game instance in its entirety. Now I just need to make the client redirect back to the lobby upon receiving a game termination signal. Well, maybe I don't need that, but I at least need a button that will take the player back to the lobby, even if the game provides a debrief screen of some sort. But I already have that--does it work? Yes it does.
 
 I then tested the flow for playing multiple games in a row, and it seems to work fine if we get the same players to boot into a subsequent game. Nice! Does that leave me anything to do before I put the server code online and give it a go? I don't think so. So let's stop being so afraid of putting it online in that case!
+
+TODO: Look at launching an EC2 instance with CloudWatch for this instead of deploying to the same instance every time.
+
+I deployed the server code and ran it, and when I tried to start game using the LAAPI I got a 500. Why? It's running to an error saying `'bool' is not callable`. Can I print the stack trace? Looks like the issue is in all_clients_ready, where we call client.ready even though it's just a boolean. But it looks like we define `ready` as both an instance var and a message in Client.py--so I should just put an identifier before the private variables.
+
+I think it worked--I've made a game! Yay! I should quickly copy over the modifications I've made to the Python  code for the LAAPI.
+
+Also TODO: Define an index.html or something to satisfy the health checks from the load balancer.
+
+On my first run through, I got served a game, but my browser redirected to an undefined game ID, so I did not connect succesfully. Why did that happen? Because I'm expecting the Lambda to send the game ID back to the client but it doesn't. Let's fix that.
+
+Sure enough, we're not even attempting to send a game ID. But we're obviously NOT supposed to get the game ID from the response to the POST request, because the startGame message is supposed to be broadcast to all clients!
+
+Now I've got the system operational for redirecting based on a socket response. And that allowed me to create a one-player lobby successfully and carry out an insta-win game, but only if I hard-coded the player IDs in the Lambda. So the last thing I need is to figure out identities, I think. How do I attach an identity ID to a client in the table?
+
+Players get an entity ID when they update their status, which they have to do at least once to start the game. So I should be fine to modify the LA API to extract identities from the table. And I have debug mode on the clients to get them sending any identity ID I fetch from DDB, so I shouldn't need any code changes there.
+
+Note also that identity IDs will duplicate unless I use an incognito browser (or maybe another browser, not sure). But this time I ran into another error: The Lambda is sending None as the identity IDs for the lobby.
+```
+list of client identity IDs we're sending to the game server: [None, None]
+```
+The reason: It's because I misspelled identityID in Client.py.
+
+This time it worked! So now if I just modify the client to send their identity ID automatically, I can get a fully automatic game loop from lobby to game and back to lobby. That's so exciting!
+
+## 4/9/2024
+
+8:48 pm - 8:59 pm (11 minutes)
+9:29 pm - 11:25 pm (1 hour 56 minutes, total 2h7m)
+
+
+Where did we leave off? We were testing the full game loop, and then I was going to make a change so that the frontend would automatically send the identity ID if we're not in debug mode. But right now I want to try the end-to-end flow again, just to show myself it still works.
+
+So, here's what to do:
+
+- [DONE] Find out how to let the EC2 instance run the server even when I'm not there.
+- [DONE] make debug mode NOT the default option, unless a query param makes it so
+- [DONE] outside of debug mode, in Game screen, send identity to server and join game automatically
+- add the lobby system
+- outside of debug mode, don't enable 'start game' button if both players aren't ready
+- make a countdown on game start so that players have a moment to prepare after loading
+
+### Run the server in the background
+
+[StackOverflow](https://stackoverflow.com/questions/32500498/how-to-make-a-process-run-on-aws-ec2-even-after-closing-the-local-machine) says that I can use `screen`--is that installed by default?
+```
+screen
+```
+Yes I do! I can detach with Ctrl+A followed by D. Then I can re-attach with
+```
+screen -r
+```
+
+### Send identity on page load
+
+Looking at [reddit](https://www.reddit.com/r/react/comments/14upcmi/fetching_data_from_an_api_upon_page_load/) has me interested in "React Query" which can prevent the need for me to use a useEffect to carry out an action on page load. Let's see what that is. Apparently now it's known as [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview).
+
+Looking at the docs, I think it would be good for me, honestly. Let's try it. Looks like installing it requires updating React though, so I went ahead with that using `npm install react@latest react-dom@latest`. I also had to update `@testing-library/react` the same way. I also had to follow steps on the React docs (https://react.dev/blog/2022/03/08/react-18-upgrade-guide) to updgrade.
+
+Now I'm running into an issue where every time I connect as a local client I am seen as 2 clients by the WS API. What's going on there? It's an issue with Lobby. But updating to the lastest version of react-use-websocket fixed the issue immediately. Nice!
+
+I hooked up the useQuery thing, and I think it works, but I also think I might be abusing it since I'm not actually returning anything meaningful. But I'll just work with it for now since I have the desired effect.
+
+Next, let's think for a second about what we're missing for the end-to-end lobby system. We have a Lobby Management API which lets us create a lobby and get a list of all lobbies, so I think we're missing two main things:
+
+1) Allow clients to create a lobby
+2) Make lobbies disappear when the host leaves
+3) Allow concurrent lobbies to act independently (probably a LAWS / LAAPI problem)
+
+We should prioritize (1) since it's the only step necessary to have a real end-to-end flow. Exciting! I think it involves creating a 'Create Lobby' page with a couple details. What are the details?
+
+- Lobby name
+- Max player count
+
+Well that's super simple. Let's go ahead with it.
+
+
+To do next:
+- Finish up flow for creating lobby through LMAPI on client
+- Test end-to-end flow to verify sending identity + joining game works
+
+## 4/12/2024
+
+6:44 pm - 7:17 pm (33m, total 2h40m)
+7:41 pm - 7:54 pm (13m, total 2h53m)
+8:00 pm - 8:03 pm (2m, total 2h55m)
+8:00 pm - 8:06 pm (6, total 3h1m)
+
+Where did I leave off? I was going to put together the frontend integration with LMAPI. That sounds perfectly reasonable so let's go ahead with it. I should first check--is the LMAPI currently deployed? And as a side note, is there a way to auto-deploy something like this from a GitHub repo? Looks like I found something about that already, [here](https://aws.amazon.com/blogs/compute/using-github-actions-to-deploy-serverless-applications/).
+
+Anyway, checking my AWS account now for the API Gateway deployment. I do NOT have it deployed--let's go ahead and deploy it with `sam build` + `sam deploy`.
+
+Don't I need to also connect it to a static subdomain of mine? How did I do that with LAAPI? It looks like my deployment actually failed because I was requesting a non-existent ticket. Let's fix that. Yep, it looks like we were trying to tie ourselves to the base domain name. I'll fix that. I think I need to go to Route53 on the console and manually create a cert for the subdomain. No, actually I need to go to Certificate Manager.
+
+I've made the cert and updated the template. Let's see if it works now--I know that in the past I've needed some time for things to propagate though.
+
+That seems to be working, or at least not failing as quickly. What can we do on the frontend? Well, now I know that the domain I'm using is lobby-management.sam-thompson-test-development.link, so I can construct the client around that.
+
+Alright, I've set that up. Time to test it. It's getting a 404. Why? Because it's not recognizing the endpoint I'm giving it as a full URL because I forgot the HTTPS prefix.
+
+I tried it again, and this time we're getting a 502 bad gateway error. I think that indicates an issue validating the HTTPS request, which means there might be an issue with the cert I used? Oh, it's just a 502 because there's a CORS error, so I can fix that with a header in the server response. But there's also an internal error, probably due to the issue I saw when testing in API gateway where it couldn't parse the max player count.
+
+Let's solve both of those. First, I'll add the `access-control-allow-origin` header in the server response. Actually, it's already there--it's just missing because of the 500 error preventing us from attaching the header. So I just need to solve the 500 error.
+
+The problem probably originates in us needing to use a `body` field or something in the JSON request for the Lambda to parse. Do I have an example where I call a Lambda API function with a payload? Probably in start-game right? But that one works just fine, so I really don't get it! But I can just modify the Lambda to print out the full `event` object to resolve this.
+
+## 4/13/2024
+
+4:16 pm - 4:27 pm (11m, total 3h12m)
+4:33 pm - 4:48 pm (15m, total 3h27m)
+7:00 pm - 8:27 pm (1h27m, total 4h54m)
+8:47 pm - 8:55pm (7m, total 5h1m)
+9:16pm - 9:43 pm (27m, total 5h28m)
+
+Currently debugging--and I think there are two different Lambda functions for CreateLobby and only one is used, which is annoying. So let's put some debug prints in the Lambda function that's actually attached to the API. Actually, that wasn't the issue--I just misplaced the debug print statement. But the problem is that I was extracting the parameter values from `event` when I should have been using `event.body`. I'll fix that.
+
+An example of doing this correctly is in the Lambda for the LAAPI's startGame function:
+```
+lobby_id = json.loads(event.get('body')).get('lobbyId')
+```
+So let's follow that pattern. And with that, I finall have a working request-response example! So does that mean we can now see the lobby from the client? Yes! But when we click the button to join the lobby, it takes me to a blank page. So that's the next thing to fix. It looks like we're definitely receiving the lobby ID, so we just need to plug that in to the URL we're navigating to.
+
+That's fixed up, but it points us to another issue, which is that we don't derive the lobby name from the lobby ID if we load the page. As a result, sending a link to the lobby will not let the website know the name or max player count for the lobby we're in. We can fix that with a new `getLobby` API endpoint on the LMAPI. That also would prevent us from loading the lobby page for a lobby that doesn't exist. But that's not really necessary right now; instead I should focus on making the LAAPI know which lobby you're part of, since right now you get all player updates even if the player is in a different lobby.
+
+How do I fix that? Well, I did something similar in the Game Server socket API. I just need the table of player connections to assign each connection to a lobby, and to query by lobby when broadcasting updates. The table already has a lobby ID actually, so that's mostly squared away.
+
+What I really ought to do is make an HTTP API endpoint for when the player first joins the lobby. And I think I will go ahead and do exactly that. The endpoint will be called `/join-lobby` and will be on the `lobby-action-api` subdomain. It will require the player to send their identity ID though, and I don't quite know how to match that with their table entry. So I'll figure that out in a bit, I guess. In that case I'll just make the `get-all-statuses` message be the handshake for setting the identity ID and lobby ID associated with a connection. I have to make sure that message endpoint has the right to write to the DDB. And in fact, I already have an API for lobby action!
+
+ChatGPT pointed me to this thing called a 'GlobalSecondaryIndex' that I might be able to use, so I'll try that.
+
+And sure enough, I got a permissions error because I forgot to give the Lambda permission to write to the DDB. Let's try this again. I fixed that, but now it looks like we're always getting an empty list for the statuses, which implies there's something wrong with our query. The problem was that the code was using `lobbyID` while the table was using `lobbyId`. Silly. So I fixed that. Next, I'll make sure that the update_status function only gives updates to players in the same lobby. Also need to make sure the same is true for disconnecting and starting game.
+
+When I left off, I was modifying the LAWS / LAAPI to broadcast updates about a player only to the clients in the same lobby as the player, so that there's isolation between lobbies. I'm considering switching the table over so that the primary key is identity ID, and that players don't get added to the table (and are therefore not subscribed to updates) until they are identified. But that could get confusing so I don't think it's needed right now.
+
+## 4/14/2024
+
+1:24 pm - 1:37 pm (13m, total 5h41m)
+3:00 pm - 5:06 pm (2h6m, total 7h47m)
+5:35 pm - 6:50 pm (1h15m, total 9h2m)
+
+I am continuing to adjust the LAWS / LAAPI to only notify members of a lobby. For the LAAPI start-game endpoint, I need to use identityID since there's no inherently connected connection ID. Which means I need a GSI for identity ID, which is perfectly fine.
+
+I've now figured out how to share code between Lambda functions using [this Medium article](https://medium.com/bip-xtech/a-practical-guide-surviving-aws-sam-part-3-lambda-layers-8a55eb5d2cbes), so that works pretty nicely. But it looks like when I send an updateStatus message in the lobby it doesn't broadcast the update back to me, so I need to fix that.
+
+I think the problem was that I was taking the result of the Table.get_item method (python docs [here](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/table/get_item.html)) and fetching its `item` field when I was supposed to get its `Item` field. Fixed that.
+
+That was enough to make updateStatus work within a lobby. Now I need to check that it isolates status updates between lobbies. It does! This is awesome--I guess that means I can now rely on my infrastructure to determine which players are in which lobbies, which is very cool. What comes next? We should try actually starting a game from one of the lobbies and see what happens.
+
+It failed with a 500. Why? It's because I am not de-stringifying the event body in the Lambda for it. Let's fix that. I realize that the server won't allow me to connect unless I'm running the frontend anyway, so I'll make sure the frontend is deployed and do the remaining tests from the prod website.
+
+I get a CORS error when fetching the lobbies list on the prod frontend. Why? Because I'm fetching from the wrong URL, implying that we didn't auto-deploy the Amplify frontend with the new URL. It looks to be connected to the new Tanstack dependency.
+
+When I left off, I was going to test the end-to-end flow using the prod frontend, but the prod frontend was failing to build due to something having a React 17.x peer dependency when running `npm install`. I don't know how to fix that so I'll need to look into it. ChatGPT pointed to a specific dependency issue where I was expecting React 18.2.x but Tanstack uses 18.0.x, so I modified package.json to require 18.x and we'll try from there. I'll check in 10 minutes.
+
+I went back to basics for a bit and found the repo for react-use-query [here](https://github.com/TanStack/query/blob/main/package.json), and I could find their package.json which listed explicit versions for many of the packages that presented dependency issues. So let's try building, again.
+
+For now I might just need to abandon Tanstack since it introduced the issue in the first place and I can't seem to get rid of the problem. That's annoying.
+
+## 4/15/2024
+
+9:05 pm - 10:40 pm (1h35m, total 1h35 this week)
+
+When I left off, I was struggling with an incompatibility between the following dependencies:
+
+- @tanstack/react-query
+- react
+
+I really coudn't figure out something to do. So I reverted back to the last version of package.json that works and I'm going to iterate from there and see what the problem is.
+
+So I think the move is to first make a build that works for npm install, then update all dependencies and try building that, and lastly adding @tanstack/react-query and trying to buid.
+
+To update all my dependencies, I do the following:
+1) `npm outdated`
+2) `npm update --save`
+3) remove node_modules and package-lock.json
+4) npm install
+5) commit
+
+That didn't help. Then I really thought that making sure I have the same Node version as the AWS Amplify machine would allow me to replicate the issue, but I saw that it's using Node 14 and I switched to Node 14 using NVM and did `npm install` without a hitch, so that's not the problem.
+
+That said, given the Provision step they have in the console, I could try replicating their whole environment in EC2. I'm also curious about one of the earlier deployments I had where the issue was entirely some peer dependency thing with `aws-amplify`, so maybe I can grab some of the versions from there.
+
+I wonder if committing package-lock would help? I recall that it's not supposed to be ignored. That was build 18.
+
+Adding package-lock.json worked--the frontend built successfully, with Tanstack and everything. Amazing!!! So does that mean we can go through the whole user flow? Yes. Everything worked great up to connecting to the game server--then the server crashed when starting the game (implying that it successfully detected the players joining!) with the following message:
+
+```
+Error: Cannot determine position for a character with index 2 because there are only 2 players expected.
+    at getCharacterPosition (/home/ubuntu/app-info/bfg-server/build/GameModel.js:37:15)
+    at GameModel._GameModel_createCharacter (/home/ubuntu/app-info/bfg-server/build/GameModel.js:205:34)
+    at GameModel.addPlayer (/home/ubuntu/app-info/bfg-server/build/GameModel.js:77:180)
+    at GameServerImpl.joinGame (/home/ubuntu/app-info/bfg-server/build/game_server/GameServerImpl.js:60:24)
+    at JoinGame.handleRequest (/home/ubuntu/app-info/bfg-server/build/socket_api/message_handler/JoinGame.js:13:29)
+    at Socket.<anonymous> (/home/ubuntu/app-info/bfg-server/build/socket_api/SocketAPIImpl.js:73:21)
+    at Socket.emit (node:events:524:35)
+    at Socket.emitUntyped (/home/ubuntu/app-info/bfg-server/node_modules/socket.io/dist/typed-events.js:69:22)
+    at /home/ubuntu/app-info/bfg-server/node_modules/socket.io/dist/socket.js:704:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:77:11
+```
+
+So that gives me a clear spot to resume the coding--it seems we have an off-by-one sort of mistake with character index. But I'm just so stoked that adding the package-lock.json made this work, that's a total life saver.
+
+## 4/16/2024
+
+6:19 pm - 7:23 pm (1h4m, total 2h41m this week)
+
+Objective for today: Figure out why the server crashes when two players connect like normal. I should be able to replicate this locally. But I can start by looking at the game server logs.
+
+I entered copy mode and scrolled up through the history in `screen` and it pointed to line 37 of GameModel.js.
+
+It looks like we got 3 requests to join the game from the same player: us-east-1:30692b31-20d5-cc42-0c18-a16094216878. Why is that? Either way, this reveals an issue. Since we have a Set of players, we automatically de-duplicate the list of players. But we always add a new character.
+
+So what happened is, we got 3 requests from player A. Each request resulted in setting the size of the players Set to 1 but created a new character belonging to player A.
+
+The fix seems to have worked somewhat. But one of the players was able to join the game and then won immediately while the other player never joined the game at all. What happened? Why did they not get the signal? The implication is that it got sent out before the connection was established. But how can that be? I need to figure it out.
+
+It looks like we logged the "Starting the game..." message twice--once for each player connecting. So I think I still messed up the logic for when to start the game, though it was slightly better this time. I also need to de-dupe the list of identity IDs who join, since there was actually only one identity ID involved.
+
+Yea, the root of the problem is that I'm always getting the same identity ID. What if I try one tab in the incognito browser and once in the main browser? Then we get two identity IDs and it works perfectly! YAY! So now I just need to make the server handle the same player joining in two tabs as if they are the same player. So the list of expected players should be a Set.
