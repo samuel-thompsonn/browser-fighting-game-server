@@ -1642,6 +1642,7 @@ So that gives me a clear spot to resume the coding--it seems we have an off-by-o
 ## 4/16/2024
 
 6:19 pm - 7:23 pm (1h4m, total 2h41m this week)
+11:16 pm - 12:13 am (57m, totall 3h38m this week)
 
 Objective for today: Figure out why the server crashes when two players connect like normal. I should be able to replicate this locally. But I can start by looking at the game server logs.
 
@@ -1656,3 +1657,19 @@ The fix seems to have worked somewhat. But one of the players was able to join t
 It looks like we logged the "Starting the game..." message twice--once for each player connecting. So I think I still messed up the logic for when to start the game, though it was slightly better this time. I also need to de-dupe the list of identity IDs who join, since there was actually only one identity ID involved.
 
 Yea, the root of the problem is that I'm always getting the same identity ID. What if I try one tab in the incognito browser and once in the main browser? Then we get two identity IDs and it works perfectly! YAY! So now I just need to make the server handle the same player joining in two tabs as if they are the same player. So the list of expected players should be a Set.
+
+Now the game is a little bit less silly when you lobby up twice as one person. I should also test whether you can have two games playing simultaneously. Then I want to set up the system to delete lobbies when the last player leaves them.
+
+It looks like we do in fact vibe with multiple games running simultaneously. Excellent!
+
+Now, how do we make it so that the last person leaving a lobby causes it to be destroyed? Well, we have an on_disconnect handler for the lobby action API, so I just need to make it call a new endpoint on the lobby management API that deletes a lobby.
+
+I added the new API endpoint--it's quite easy, but I need to test it on API gateway to make sure it works. Next I need to add the logic into the LAWS to check the lobby for emptiness when a player logs out. I've marked the location to search.
+
+Let's test the new API endpoint. Let's delete the lobby with ID 187a1928-5b0f-459b-9749-04766956f38b. But I need to make more changes to the lobby management API code. So that's where I left off.
+
+## 4/17/2024
+
+7:51 pm - 
+
+I don't have internet and I'm real cramped, so I'm just messing around with some CSS styling today.

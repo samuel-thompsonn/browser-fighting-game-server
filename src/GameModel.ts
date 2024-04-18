@@ -43,12 +43,12 @@ function getCharacterPosition(
   };
 }
 
-function setContainsList<T>(set: Set<T>, list: T[]) {
-  return list.every((item) => set.has(item));
+function setContains<T>(set: Set<T>, possibleSubset: Set<T>) {
+  return Array.from(possibleSubset).every((item) => set.has(item));
 }
 
 export default class GameModel implements GameInstance, GameInternal, CharacterListener {
-  #expectedPlayers: string[];
+  #expectedPlayers: Set<string>;
 
   #characters: Map<string, Character>;
 
@@ -76,7 +76,7 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
   ) {
     // TODO: Extract logic for managing player count
     //   to game instance manager
-    this.#expectedPlayers = expectedPlayers;
+    this.#expectedPlayers = new Set(expectedPlayers);
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
@@ -91,15 +91,15 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
   addPlayer(client: Client) {
     console.log(`Game ID: ${this.#id} | Adding player ${client.getPlayerID()}`);
     if (!this.#playersAndSpectators.has(client.getPlayerID())
-    && this.#expectedPlayers.includes(client.getPlayerID())) {
+    && this.#expectedPlayers.has(client.getPlayerID())) {
       // TODO: Assign character ID to player ID so that controls are routed appropriately
       console.log(`Game ID: ${this.#id} | Creating character for player ${client.getPlayerID()}`);
       this.#characters.set(client.getPlayerID(), this.#createCharacter(client.getPlayerID()));
       console.log(`Game ID: ${this.#id} | There are now ${this.#characters.size} characters in the game.`); // eslint-disable-line
     }
     this.#playersAndSpectators.add(client.getPlayerID());
-    console.log(`Game ID: ${this.#id} | There are now ${this.#playersAndSpectators.size} players spectating or participating. Number of players needed to start the game: ${this.#expectedPlayers.length}`); // eslint-disable-line
-    if (setContainsList(this.#playersAndSpectators, this.#expectedPlayers)) {
+    console.log(`Game ID: ${this.#id} | There are now ${this.#playersAndSpectators.size} players spectating or participating. Number of players needed to start the game: ${this.#expectedPlayers.size}`); // eslint-disable-line
+    if (setContains(this.#playersAndSpectators, this.#expectedPlayers)) {
       console.log(`Game ID: ${this.#id} | All players connected. Starting the game...`);
       // TODO: Send timer for game start time instead of starting game immediately
       this.#gameInstanceManagerInternal.onStartGame(this.#id);
@@ -132,7 +132,7 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     // TODO: Probably want to remove characterCounter and just use this.#characters.size
     const newCharacterPosition = getCharacterPosition(
       this.#characterCounter,
-      this.#expectedPlayers.length,
+      this.#expectedPlayers.size,
       STAGE_WIDTH,
       STAGE_X_OFFSET,
     );
