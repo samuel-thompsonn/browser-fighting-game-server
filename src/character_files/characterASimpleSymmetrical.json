@@ -300,6 +300,46 @@
       ]
     },
     {
+      "name": "light kick when pressing lightAttack + down",
+      "id": "lightKick",
+      "priority": 60,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "lightAttack"
+            }
+          ]
+        },
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "moveDown"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "lightKickStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "go to knocked out animation when out of health",
       "id": "vulnerableToKnockOut",
       "priority": 200,
@@ -365,6 +405,10 @@
           {
             "id": "enterCrouch",
             "priority": 35
+          },
+          {
+            "id": "lightKick",
+            "priority": 50
           }
         ],
         "interactions": [],
@@ -448,6 +492,10 @@
           {
             "id": "vulnerableToHit",
             "priority": 100
+          },
+          {
+            "id": "lightKick",
+            "priority": 50
           }
         ],
         "interactions": [
@@ -988,6 +1036,156 @@
                     "value": "afterEnd"
                   }
                 ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "startup lag for light kick",
+      "id": "lightKickStartup",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to active light kick immediately after this ends",
+            "id": "lightKickActiveAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "lightKickActive"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Active frames for light kick attack",
+      "id": "lightKickActive",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "switch to end lag for light kick immediately after this ends",
+            "id": "lightKickEndLagAfterEnd",
+            "priority": 1,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "lightKickEndLag"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          },
+          {
+            "entityType": "hitbox",
+            "properties": [
+              {
+                "propertyName": "damage",
+                "propertyValue": "10"
+              },
+              {
+                "propertyName": "knockback",
+                "propertyValue": "1.0"
+              }
+            ],
+            "rectangles": [
+              {
+                "x": 0.75,
+                "y": 0.75,
+                "width": 0.5,
+                "height": 0.25
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "end lag for light kick",
+      "id": "lightKickEndLag",
+      "numFrames": 2,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "defaultToIdle",
+            "priority": 10
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
               }
             ]
           }
