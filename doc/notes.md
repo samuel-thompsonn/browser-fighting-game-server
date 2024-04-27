@@ -1673,3 +1673,128 @@ Let's test the new API endpoint. Let's delete the lobby with ID 187a1928-5b0f-45
 7:51 pm - 
 
 I don't have internet and I'm real cramped, so I'm just messing around with some CSS styling today.
+
+I did some work on styling, and now I feel like working on Ryu. I think the best moves for the meta would be to add a low punch or kick from crouching stance. It could also be good to add a low punch or kick from standing that is able to hit the crouch since there is no way to hit someone in a crouch right now. It is tedious to mess with animations but I have some time right now so maybe I could try it.
+
+Beyond that I can make it so you can jump, or make it so you can't walk offscreen. I think the jumping will be pretty complicated and calls for adding aerial moves, so I'll skip that for now. So here's the sequence:
+
+- make characters collide with the edge of the arena instead of it going forever
+- add a low attack from standing
+- add a low attach from crouching
+
+How do I mess with the movement? Well, the Game applies movement each frame so perhaps I should add it to the logic for resolving movement. Where is the main game loop?
+
+## 4/19/2024
+
+7:30 pm - 8:22 pm (52 minutes)
+
+Chilling on the plane. I want to add a low kick attack to Ryu. I'm recording an SOP for it at the same time to make it easier and hopefully identify the steps for improvement--like an animation editor.
+
+Now I'm trying to test out the new animation. It has the novel property that it requires pressing two keys at once. But the first thing I see is that the heavy attack control isn't working anymore. AND the new control input is not working either.
+
+But all in all, I really want to update the character file format again to automatically include startup and endlag, in addition to just making it a nicer experience to craft a new animation.
+
+It doesn't work because I used the wrong syntax when defining the controls conditions; I'll try again. And the reason we messed up the heavy attack is because I forgot to change the ID on the new state. But I'm still seeing the same problem. I didn't actually fix the ID. Plus I need to actually employ the new interaction type.
+
+When I next resume, I can continue debugging. But it looks like we at least have recovered the heavy attack animation.
+
+## 4/20/2024
+
+5:51 pm - 6:10 pm (19m)
+7:55 pm - 10:00 pm (2h5m, 2h24m total)
+
+Debugging the server side of the light kick animation since it doesn't seem to be activating. What happens if I turn off the crouch interaction? I should also see if I can draft up a quicker way to test character controls since spinning up the server is annoying.
+
+If I turn off the crouch interaction, I am able to do the light kick, which is great news! So I'm guessing the problem is that you enter crouch stance as soon as you press the down key and it prevents you from doing the kick. I can resolve this just by letting you do the kick even if you've started a crouch. And that now works! Now I just need to configure the hitbox and we're good.
+
+I've configured the change, but this is a tough process so I'd very much like to switch gears for a moment and configure the logic for destroying a lobby when all players exit. That is best enacted through a change to the Lobby Action API that contacts the Lobby Management API.
+
+But first I need to modify the Lobby Management API to finish up the lobby deletion endpoint. The only remaining problem is that the Lambda lacks permission to the DDB.
+
+I've finished the endpoint--it successfully allowed me to delete a lobby! Now it's time to put some useful print statements for the LAWS change and give it a test.
+
+On first inspection, it does not seem to be deleting the lobby when I leave it. Why is that? Well, the first potential flaw I notice is that we delete the player's entry in the connections database before we get a chance to find out what lobby they're part of. So I should start by moving the deletion to later in the process. I've redeployed with a quick fix that just moves the deletion down.
+
+That also does not result in the destruction of the lobby. Is the endpoint every called? It looks like we are correctly determining that we need deletion, but the request is timing out. So we need to increase the time limit on the Lambda. Simple enough. I increased the timeout to 15 seconds, let's try it.
+
+It still didn't work, so let's take another look at the logs. The LMAPI failed to parse the JSON. The reason detailed [here in StackOverflow](https://stackoverflow.com/questions/26685248/difference-between-data-and-json-parameters-in-python-requests-package) is because if you're using the `data` field you need to specify the content-type header to application/json. So just use the `json` field in `requests.post` instead.
+
+Now it works!
+
+But I realize that I need to redefine the logic for deleting a lobby, because right now it gets deleted even if the players go to the actual game. So really I need to establish a relationship (API) between the lobby and the game server.
+
+But I was wondering if I could simplify this by having the client establish a websocket connection with the lobby even when we're on the game screen. The only problem is that we would momentarily disconnect from the websocket when we switch screens.
+
+The other option is this: When a player hits 'start game', change the lobby status to something like 'in-game'. When players disconnect, check the lobby status, and don't delete the lobby on player disconnects if the status is in-game. Then when the players reconnect to the lobby WS (or better yet, when the game server tells us), set the game status back to 'setting up' or whatever. This won't account for the situation where both players disconnect directly from the game screen... UNLESS we have the game server tell the lobby when this happens. So this is pretty complicated but I think it's the right way to go forward.
+
+The last and most simple option is just to have a button in the lobby itself that deletes the lobby. I like this option because we shouldn't be spending a whole lot of time on complicated lobby deletion logic just yet.
+
+Next time, I want to put together some tools to make it easier to add moves to Ryu's toolkit and test them. But I feel done for now.
+
+## 4/23/2024
+
+9:01 pm - 11:40 pm (2h39m)
+
+As mentioned before, I'll be dedicating some time to constructing more tools for character customization. There are a few features I can list and prioritize:
+
+1. Given a character file, copy-paste it into a page and immediately get to test out the resulting character.
+1. Specify a move as a whole instead of separate states for startup, active and end lag
+
+So what's necessary for item (1)?
+
+- A dedicated page on the frontend for it
+- Code on the frontend that takes in JSON (string) and comes out with all the animation states for it on the fly
+- Code on the backend (an API endpoint) that takes in JSON, consructs a character out of it, and puts the character in a test ring.
+- Code in the backend for managing the test ring itself. Should only be active when running locally at the moment.
+
+So, perhaps we can draft up the user experience first. There is a page with a big wide text box where you paste in the character file contents. Next to it is a canvas/viewport for a game, probably without health bars. There is a button for submitting the contents of the textbox. When that button is pressed, we get a loading screen on the canvas, and then it shows a fresh game with a new instance of the character.
+
+This has me excited, so let's go ahead and draft up this page. I think the main challenge will be setting up the debug/tinkering lobby on the backend, but that's fine.
+
+Now we have a nicely styled page--that's the fun part. Later on I would also want to add a piece for putting together animations from a sprite sheet like with the animations tester. But let's just say I want to rapidly test a character. Then what I can do on the frontend is just set up the canvas part of that with stubs for the networked components, including the part where we load animations. So I'll do that now.
+
+It looks like I've already done quite a good job of separating the gamestate from the canvas, so I can actually put a dummy/stub canvas on the page and contrive some made-up state for it and that actually works. Cool!
+
+Now before I go further, let's take a quick moment to see if I can fix up the Canvas element's reluctance to fit nicely in a div. And now it's totally centered, so that's a great sign.
+
+Now, where was I? For the frontend, I wanted to load the animations from a file. I realize now that I need to have two text inputs, one for the frontend character definition and one for the backend. For now I guess I'll focus on the frontend. So the user will put in the character data, hit the submit button, and the canvas will reload with new sprites for the character. Let's do it!
+
+And just like that, I have the system set up to rapidly change the character rendering data and click a single button to re-submit. Nice! Now let's add some kind of system so you can edit both the frontend and backend info. Maybe I'll make a scrollable div containing two text boxes.
+
+Now I'm on the part where I connect this up to the backend. So first let's just ignore the part about sending new character data. We can just focus on establishing a websocket connection like the game does. I think the best thing we can do is make a special 'start-game' debug API endpoint that starts a debug session. But first I want to restart my computer real quick to get rid of this dumb keyboard issue.
+
+Much better! Now let's plan out this debug endpoint. Basically, it should make a game instance immediately with one player that will be piloted by the first person who connects. How will that look in the code?
+
+index.ts will call GameServer.createGameInstance with a list of one player ID specified by the local client. We'll need to pass in a parameter to the game model that lets us skip the regular check for the game being over. Then the client will get back the game ID and use it to connect alongside their spoofed identity ID (or even their real one!). From there we can just establish a normal socket connection.
+
+Now before we get started on that--is it compatible with updating the character definition? How will we even do that? Well, it must start pretty much in index.ts since it's coming from an API call.
+
+When the game creates a character, it calls SimpleCharacterFileReader.readCharacterFile on the data imported directly from the JSON character data file. So we'll need an externally available method that either (1) creates a whole new GameModel or (2) creates a new character from the game data and sticks it in the existing game. I am favoring the latter since that actually reloads the thing we're reloading. So I guess I could focus on adding that capability to GameModel.
+
+When I come back, I'll set up the rest of the server-side endpoint for hosting a debug match and connect it to the character editor.
+
+## 4/27/2024
+
+2:36 pm - 3:00 pm (24 minutes)
+5:08 pm - 6:35 pm (1h27m)
+
+As stated above, I'll need to finish implementing the server side endpoint for starting a debug game. What remains? It looks like we mainly just need to pass the debug flag down to the game constructor. So now I've drilled the isDebug prop down to the game model, which means we should no longer be checking for winners, right? So I should probably just not be shy--I'll go ahead and test it.
+
+So the next step is to have the frontend send a signal to create the game and then try to connect. For now I can add some buttons for this.
+
+Awesome! Next I need to connect to the target game with the websocket. We can gather the game ID from the response to the request.
+
+Now I've gotten the game running, but I realize that both this page and Game.tsx need to share all the code for handling incoming and outgoing messages with the server. So I should copy over the code to a portable form and then apply it to Game.tsx.
+
+Now I've made one such candidate for a portable game interface. But I'm not receiving any character updates even though the game should have started. Why is that? Is the game loop running?
+
+The first thing I notice is that the list of expected players is empty when it shouldn't be. And it's because I didn't do a proper job of setting the headers to JSON for the outgoing response. But I fixed that, and now we have the character actually idling around, which is awesome! Does modifying the visualizer still work? Yes, it does indeed! Woo!
+
+Next, I need to make it possible to control the character in this state. That's frontend work on the adapter I made.
+
+And now it just works, which is great! Next I have the following tasks available:
+
+1) Add the endpoint on the backend for creating a character from "Behavior" input text area
+2) Add a sprite visualizer that shows the sprites used for the current animation
+3) Add controls for pausing
+4) Add animation tester

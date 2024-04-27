@@ -45,7 +45,7 @@ class GameServerImpl implements GameServer, GameInstanceManagerInternal {
     }, MILLIS_PER_GAME_LOOP);
   }
 
-  createGameInstance(players: string[]): GameID {
+  createGameInstance(players: string[], isDebug = false): GameID {
     // TODO: Remove reliance on GameModel concrete class
     const gameID = `Game-${this.#gameCounter}`;
     this.#gameCounter += 1;
@@ -53,6 +53,7 @@ class GameServerImpl implements GameServer, GameInstanceManagerInternal {
       gameID,
       players,
       this,
+      isDebug,
     ));
     return gameID;
   }

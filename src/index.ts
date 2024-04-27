@@ -11,6 +11,7 @@ import GameServer from './game_server/GameServer';
 dotenv.config();
 const { NODE_ENV, PORT, CLIENT_URL } = process.env;
 const VERBOSE = NODE_ENV !== 'production';
+const ENABLE_DEBUG = NODE_ENV !== 'production';
 
 function logVerbose(logText:string) {
   if (VERBOSE) { console.log(logText); } // eslint-disable-line
@@ -25,6 +26,23 @@ function logVerbose(logText:string) {
 //   const gameID = gameInstanceManager.getGameID();
 //   gameInstances.set(gameID, gameInstanceManager);
 // }
+
+function setUpStartDebugGameEndpoint(app: Express, gameServer: GameServer): void {
+  app.post('/debug/start-game', (req, res) => {
+    if (!ENABLE_DEBUG) {
+      res
+        .header('Access-Control-Allow-Origin', '*')
+        .status(400)
+        .json({ message: 'This server is not configured for debug operations.' });
+    }
+    const { players = [] } = req.body;
+    console.log(`Debug game start called. req.body = ${JSON.stringify(req.body)}`);
+    const gameID = gameServer.createGameInstance(players, true);
+    res
+      .header('Access-Control-Allow-Origin', '*')
+      .json({ gameID });
+  });
+}
 
 // Handles a request from the Lobby Action API to start a game instance
 function setUpStartGameEndpoint(app: Express, gameServer: GameServer) {
@@ -51,7 +69,7 @@ function main() {
   const socketServer = new SocketAPIImpl();
   const gameServer: GameServer = new GameServerImpl(socketServer);
   setUpStartGameEndpoint(app, gameServer);
-
+  setUpStartDebugGameEndpoint(app, gameServer);
   const server = createServer(app);
   const io = new Server(server, {
     cors: {

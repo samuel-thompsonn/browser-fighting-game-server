@@ -11,6 +11,7 @@ import GameInstanceManagerInternal from './game_instance_manager/GameInstanceMan
 import Client, { PlayerID } from './client/Client';
 import CharacterListener from './CharacterListener';
 import { CharacterStatus } from './CharacterDataInterfaces';
+import { SimpleCharacterFileData } from './CharacterFileInterface';
 
 const STAGE_WIDTH = 350;
 const STAGE_X_OFFSET = -50;
@@ -69,14 +70,18 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
   // Could also be gameState as an enum of NOT_STARTED, STARTED, COMPLETE
   #active: boolean;
 
+  #isDebug: boolean;
+
   constructor(
     id: GameID,
     expectedPlayers: PlayerID[],
     gameInstanceManagerInternal: GameInstanceManagerInternal,
+    isDebug = false,
   ) {
     // TODO: Extract logic for managing player count
     //   to game instance manager
     this.#expectedPlayers = new Set(expectedPlayers);
+    console.log(`Game ID: ${id} | this.expectedPlayers: ${JSON.stringify(expectedPlayers)}`);
     this.#characters = new Map<string, Character>();
     this.#pendingMovement = new Map<Character, Position[]>();
     this.#characterCounter = 0;
@@ -86,6 +91,7 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     this.#id = id;
     this.#gameInstanceManagerInternal = gameInstanceManagerInternal;
     this.#active = false;
+    this.#isDebug = isDebug;
   }
 
   addPlayer(client: Client) {
@@ -107,6 +113,15 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     }
   }
 
+  createNewCharacterForPlayer(client: Client, characterData: SimpleCharacterFileData) {
+    if (!this.#isDebug) {
+      throw new Error('Attempted to do debug operation createNewCharacterForPlayer for a non-debug game.');
+    }
+    this.#active = false;
+    this.#characters.set(client.getPlayerID(), this.#createCharacter(client.getPlayerID()));
+    this.#active = true;
+  }
+
   getID() {
     return this.#id;
   }
@@ -122,13 +137,16 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     this.#gameListeners.delete(listener);
   }
 
-  #createCharacter(characterID: string): Character {
+  #createCharacter(
+    characterID: string,
+    characterData: SimpleCharacterFileData = characterASimple,
+  ): Character {
     if (this.#active) {
       console.log(`Game ID: ${this.#id} | Cannot create new character because there are already ${this.#characterCounter} characters.`);
       throw new Error('Failed to create a character: The game has already started!');
     }
     console.log(`Game ID: ${this.#id} | Creating new character`);
-    const characterTemplate = SimpleCharacterFileReader.readCharacterFile(characterASimple);
+    const characterTemplate = SimpleCharacterFileReader.readCharacterFile(characterData);
     // TODO: Probably want to remove characterCounter and just use this.#characters.size
     const newCharacterPosition = getCharacterPosition(
       this.#characterCounter,
@@ -237,6 +255,9 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
   }
 
   #handleEndConditions(): void {
+    if (this.#isDebug) {
+      return;
+    }
     const currentWinner = this.#getCurrentWinner();
     if (currentWinner) {
       this.#handleGameComplete(currentWinner);
