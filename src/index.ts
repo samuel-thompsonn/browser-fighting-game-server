@@ -44,6 +44,27 @@ function setUpStartDebugGameEndpoint(app: Express, gameServer: GameServer): void
   });
 }
 
+function setUpUpdateCharacterDataEndpoint(app: Express, gameServer: GameServer) {
+  app.post('/debug/update-character-data', (req, res) => {
+    if (!ENABLE_DEBUG) {
+      res
+        .header('Access-Control-Allow-Origin', '*')
+        .status(400)
+        .json({ message: 'This server is not configured for debug operations.' });
+    }
+    const { identityID, gameID, behaviorData } = req.body;
+    console.log('Debug update character data called.');
+    gameServer.createNewCharacterForPlayer(
+      { getPlayerID: () => identityID },
+      gameID,
+      behaviorData,
+    );
+    res
+      .header('Access-Control-Allow-Origin', '*')
+      .json({ gameID });
+  });
+}
+
 // Handles a request from the Lobby Action API to start a game instance
 function setUpStartGameEndpoint(app: Express, gameServer: GameServer) {
   app.post('/start-game', (req, res) => {
@@ -70,6 +91,7 @@ function main() {
   const gameServer: GameServer = new GameServerImpl(socketServer);
   setUpStartGameEndpoint(app, gameServer);
   setUpStartDebugGameEndpoint(app, gameServer);
+  setUpUpdateCharacterDataEndpoint(app, gameServer);
   const server = createServer(app);
   const io = new Server(server, {
     cors: {

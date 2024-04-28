@@ -9,7 +9,8 @@ interface GameInstance {
   updateCharacterControls(characterID: string, controlsChange: object): void
   removeCharacter(characterID: string): void
   addPlayer(client: Client): void
-  handlePlayerForfeit(playerID: string): void;
+  createNewCharacterForPlayer(client: Client, characterData: unknown): void
+  handlePlayerForfeit(playerID: string): void
 }
 
 export default GameInstance;

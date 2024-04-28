@@ -29,21 +29,6 @@ function applyCharacterMovement(deltaPositions: Map<Character, Position>): void 
   });
 }
 
-function getCharacterPosition(
-  characterIndex: number,
-  totalCharacters: number,
-  stageWidth: number,
-  stageOffset: number,
-): Position {
-  if (characterIndex >= totalCharacters) {
-    throw new Error(`Cannot determine position for a character with index ${characterIndex} because there are only ${totalCharacters} players expected.`);
-  }
-  return {
-    x: ((stageWidth / (totalCharacters + 2)) * (characterIndex + 1)) + stageOffset,
-    y: 0,
-  };
-}
-
 function setContains<T>(set: Set<T>, possibleSubset: Set<T>) {
   return Array.from(possibleSubset).every((item) => set.has(item));
 }
@@ -118,7 +103,10 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
       throw new Error('Attempted to do debug operation createNewCharacterForPlayer for a non-debug game.');
     }
     this.#active = false;
-    this.#characters.set(client.getPlayerID(), this.#createCharacter(client.getPlayerID()));
+    this.#characters.set(
+      client.getPlayerID(),
+      this.#createCharacter(client.getPlayerID(), characterData),
+    );
     this.#active = true;
   }
 
@@ -148,7 +136,7 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     console.log(`Game ID: ${this.#id} | Creating new character`);
     const characterTemplate = SimpleCharacterFileReader.readCharacterFile(characterData);
     // TODO: Probably want to remove characterCounter and just use this.#characters.size
-    const newCharacterPosition = getCharacterPosition(
+    const newCharacterPosition = this.#getCharacterPosition(
       this.#characterCounter,
       this.#expectedPlayers.size,
       STAGE_WIDTH,
@@ -175,7 +163,7 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
    */
   updateCharacterControls(characterID: string, controlsChange: ControlsChange): void {
     const targetCharacter = this.#characters.get(characterID);
-    console.log(`GameModel: Updating character controls. characterID: ${characterID}. controlsChange: ${JSON.stringify(controlsChange)}. targetCharacter: ${targetCharacter}`);
+    console.log(`GameModel: Updating character controls. characterID: ${characterID}. controlsChange: ${JSON.stringify(controlsChange)}. targetCharacter: ${JSON.stringify(targetCharacter)}`);
     if (!targetCharacter) {
       return;
     }
@@ -299,5 +287,23 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     // if that ends the game, the end game logic should handle it.
     // for now, we can just hack it by setting thier health to 0.
     this.#characters.get(playerID)?.setCurrentHealth(0);
+  }
+
+  #getCharacterPosition(
+    characterIndex: number,
+    totalCharacters: number,
+    stageWidth: number,
+    stageOffset: number,
+  ): Position {
+    if (this.#isDebug) {
+      return { x: 0, y: 0 };
+    }
+    if (characterIndex >= totalCharacters) {
+      throw new Error(`Cannot determine position for a character with index ${characterIndex} because there are only ${totalCharacters} players expected.`);
+    }
+    return {
+      x: ((stageWidth / (totalCharacters + 2)) * (characterIndex + 1)) + stageOffset,
+      y: 0,
+    };
   }
 }

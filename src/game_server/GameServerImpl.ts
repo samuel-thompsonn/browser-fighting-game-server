@@ -74,6 +74,14 @@ class GameServerImpl implements GameServer, GameInstanceManagerInternal {
     }
   }
 
+  createNewCharacterForPlayer(client: Client, gameID: GameID, characterData: unknown) {
+    const targetGame = this.#gameInstances.get(gameID);
+    console.log(`GameServerImpl: Player ${client.getPlayerID()} attempted to create a new character in ${gameID}. Target game exists: ${!!targetGame}`);
+    if (targetGame) {
+      targetGame.createNewCharacterForPlayer(client, characterData);
+    }
+  }
+
   handleControlsChange(client: Client, controlsChange: object): void {
     console.log(`Game server received controls change from player. playerID: ${client.getPlayerID()}`);
     const gameID = this.#playersToGameInstances.get(client.getPlayerID());

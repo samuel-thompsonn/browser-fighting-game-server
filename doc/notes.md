@@ -1777,6 +1777,7 @@ When I come back, I'll set up the rest of the server-side endpoint for hosting a
 
 2:36 pm - 3:00 pm (24 minutes)
 5:08 pm - 6:35 pm (1h27m)
+8:32 pm - 
 
 As stated above, I'll need to finish implementing the server side endpoint for starting a debug game. What remains? It looks like we mainly just need to pass the debug flag down to the game constructor. So now I've drilled the isDebug prop down to the game model, which means we should no longer be checking for winners, right? So I should probably just not be shy--I'll go ahead and test it.
 
@@ -1798,3 +1799,19 @@ And now it just works, which is great! Next I have the following tasks available
 2) Add a sprite visualizer that shows the sprites used for the current animation
 3) Add controls for pausing
 4) Add animation tester
+
+For (1), should it be a socket operation to the game model, or should it be an API request? I think there's no reason for it to be a socket operation in particular, so I'll go ahead and make it an API request--both go through the same interface anyway really.
+
+I set up the new endpoint. It seems to be creating a new character but it doesn't actually give the new character different stats. What's going on? I just had a typo where I forgot to plug in the character data. Fixing that actually fixed the entire thing, so now I can plug in the character on the spot and modify its sprites OR its behavior. That's awesome!
+
+Looking at this, it would be useful to have a placeholder sprite so that we don't crash if I mess with the behavior before I mess with the sprites. And after that I can look at other tools--either the update to the character file format, or the animations visualizer. This feels like a huge step!
+
+So, what do I really want before I implement the next type of attack (probably something from crouch)? I think what I'd like most is that new file format. But here's the flow that I envision for creating the move:
+
+1. Make the frontend part
+  1. Just click the place on the sprite sheet, set the height, width, stride, and number of frames.
+  2. Check the animation in the animation tester. Maybe at the same time
+2. Make the backend part
+  1. Define the hitbox and interactions, probably a pretty manual process
+
+So really what excites me the most is setting the animations with just some clicks and having a very visual process of it. So let's pivot toward that and do some playing around.

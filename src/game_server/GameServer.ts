@@ -6,6 +6,7 @@ interface GameServer {
   joinGame(client: Client, gameID: GameID): void;
   handleControlsChange(client: Client, controlsChange: object): void;
   handleForfeit(client: Client): void;
+  createNewCharacterForPlayer(client: Client, gameID: GameID, characterData: unknown): void;
 }
 
 export default GameServer;
