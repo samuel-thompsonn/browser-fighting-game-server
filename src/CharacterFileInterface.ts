@@ -1,4 +1,5 @@
 import CollisionEntity from './CollisionEntity';
+import FileAttackAnimationDescription from './animation_description_reader/FileAttackAnimationDescription';
 import StateInteraction from './state_interaction/StateInteraction';
 
 export interface CharacterDimensions {
@@ -99,6 +100,7 @@ export interface FileAnimationDescription {
   name: string;
   id: string;
   numFrames: number;
+  type?: string;
   state: {
     importedInteractions?: ImportedInteractionDescription[];
     interactions?: StateInteractionDescription[];
@@ -121,5 +123,5 @@ export interface SimpleCharacterFileData {
     knockbackStrength: number;
   },
   interactions: StateInteractionDescription[];
-  animations: FileAnimationDescription[];
+  animations: (FileAnimationDescription | FileAttackAnimationDescription)[];
 }

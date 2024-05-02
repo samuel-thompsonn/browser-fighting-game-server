@@ -1776,8 +1776,8 @@ When I come back, I'll set up the rest of the server-side endpoint for hosting a
 ## 4/27/2024
 
 2:36 pm - 3:00 pm (24 minutes)
-5:08 pm - 6:35 pm (1h27m)
-8:32 pm - 
+5:08 pm - 6:35 pm (1h27m, total )
+8:32 pm - 12:33 am (4h1m, total )
 
 As stated above, I'll need to finish implementing the server side endpoint for starting a debug game. What remains? It looks like we mainly just need to pass the debug flag down to the game constructor. So now I've drilled the isDebug prop down to the game model, which means we should no longer be checking for winners, right? So I should probably just not be shy--I'll go ahead and test it.
 
@@ -1815,3 +1815,105 @@ So, what do I really want before I implement the next type of attack (probably s
   1. Define the hitbox and interactions, probably a pretty manual process
 
 So really what excites me the most is setting the animations with just some clicks and having a very visual process of it. So let's pivot toward that and do some playing around.
+
+So let's just put together the mockup for customizing frontend animations. It's got the following:
+- Form for specifying file path, frame size, stride, states per frame, center
+- Image for selecting offset and visualizing animation
+- Animation player (from the animation tester) alongside, to see things in motion.
+
+For that I need to make a special canvas that visualizes the image and lets me at least draw boxes on it to show the frames. Ideally I should be able to zoom and pan but I don't want to spend forever on that.
+
+So I guess I'll be mocking up a UI for that.
+
+Okay, I've made good progress but now I'm very sleepy. When I left off, I had made an editor that lets me view the sprite sheet and highlights the exact parts used to control the animations for each animation. Then I made it so clicking on the sprite sheet could set the offset values. And I tested this with the debug game preview and it seems to have worked! But I'm running into some buggy behavior that I need to figure out where modifying the source data is causing all the state to be reset. So that's for tomorrow.
+
+Next time, I want to add some fields so you can control the other aspects of the animation state such as stride and width using number inputs. Then I want to make it easy to add a new animation state or delete one using the GUI.
+
+Overall, I think this is going to make it much easier to make a character.
+
+## 4/28/2024
+
+11:09 pm - 12:24 am (1h15m)
+
+I realize that I can probably preserve canvas scale on re-render by making it also a prop. This adds a logical problem where the EditorTester owns the canvas sscale when it really shouldn't so that probably just means I need to make a separate component within EditorAnimationView for the canvas. But for now it works so I am not complaining.
+
+Now I'm in a pretty good spot for the character animation editor--it was pretty fun to use it to try put together the front punch animation, but it suffers from the fact that the animations are not evently spaced on the sprite sheet, so I really ought to fix that. In an ideal world, I guess you would be able to specify the frame for each sprite individually, but that probably gets quite complex quickly (?).
+
+Here's what comes next:
+
+1. Make it so that zooming in actually zooms in on where you are selected (or just implement the scrolling thing for real or maybe event zooming in on click), so that I can set precise pixel coordinates for states that aren't in the top left. Requires setting up an offset transformation but that's doable.
+2. Add the animation tester somewhere so we can easily play the animation for the current state to see how it's looking.
+3. Enable adding or removing animations from the list so that we can actually full define a new animation on the frontend.
+
+I also realize (and this one is a lot more far fetched, but hear me out I guess) that we could make a Python or JS utility that analyzes an image:
+
+- finds all the unique sprites
+- groups them into animations
+- for each animation, finds the widest and tallest sprites, to make a bounding box
+- arranges them all on an output file (or many output files)
+- writes the states in my JSON encoding
+
+wow, that would obselete a lot of this work but it would also be extremely cool and exciting! For now I am going to at least get the animation tester together and such so that we can add a new animation.
+
+## 4/29/2024
+
+9:23 pm - 9:46 pm (23m)
+11:45 pm - 12:40 pm (55m)
+
+I managed to fix up the issue with re-rendering. The entire problem was that I was using too much layers of function calling when swapping between which component to show between the game and the sprite visualizer.
+
+Now it's time to fix up the zooming in so that it centers on the sprite offset. Let's commit what we have on the editor so far since it's pretty good.
+
+I would say it's now very easy to add an animation state. Just add it in the editor, configure it appropriately, and copy-paste the configuration back into chracterASimple.json. Really nice!
+
+Next, I will add the animation tester to the top, as I promised to myself. It would also be very nice to add some panning around to the editor by switching mouse modes/tools between 'pan' and 'select animation location'. But that's really not necessary. This thing is so cool!
+
+## 4/30/2024
+
+9:05 pm - 10:22 pm (1h17m)
+11:23 pm - 11:44 pm (21m, total 1h38m)
+11:47 pm - 11:49 pm (2m)
+11:51 pm - 12:39 pm (46m, total 2h29m)
+
+
+I'm starting by adding the animation tester to the animation editor. Let's go for it.
+
+It seems that all I really need to change in the animation tester is having it create a new character visualizer for the animation data whenever it updates, right?
+
+I now have a functional animation tester on the page, which is great! The UI is looking really crowded and ugly, so I might want to take some time to fix that. But for now I have all the tools I need to add some nice animations, so I should probably focus now on the backend aspects of the states so that I at least have something workable.
+
+So how do I even start with that? I have two options:
+
+1) Update the character file parser to take in a new kind of animation state representing an entire attack including startup, active frames, and end lag. Then make the UI define a state of that type.
+2) Make the UI conform to the current state, but make it smart by defining one state with startup + active + endlag and then have it translate that into 3 states.
+
+Since (2) would be throwaway work, I'll update the character file parser.
+
+For the new format, I'll add a new optional `type` field on an animation state that lets us define things like movement or attacks. Then I can interpret the type for `state` based on the value of `type`.
+
+To test things out, I'll clobber up the light attack state and transform it into something that translates well.
+
+I think I've got most of the new reader put together. I just am having some problems running the server due to type validation, so next time I'll solve that, debug the new system for reading animation states, and add a UI for defining them.
+
+## 5/1/2024
+
+9:15 pm - 9:17 pm
+9:55 pm - 11:08 pm
+
+I'm getting the new character file reader to compile. Right now it seems that the state I put in characterASimple doesn't count as the FileAttackAnimationDescription type for some reason.
+
+I can probably isolate the problem and solve it by making a quick JSON file just for the value and seeing if it matches the type. The problem is that in the type definition I limited the 'type' value to 'attack' but apparently it's a string according to TS. Strange, but admits an easy fix.
+
+Now it seems that the backend is working fine but we're stuck in the light attack animation. That's probably because we don't have an interaction set for transitioning back to the idle state!
+
+I've added that, but the issue persists. Looking at the network traffic being received by the client (apparently the network tab gives you a good view of that for sockets if you click on the 101 GET request), we seem to have an infinite loop for state lightAttack1. That probably has something to do with lacking a transition to lightAttack(n+1), right?
+
+No, we actually stay on the current animation by default. So it looks like the answer is to set the entire animation to have the afterEnd transition to idle. I'm also in debate about making it so that by default, animations progress to their next index. But it also really doesn't matter, and I shouldn't break anything (probably just the 'knocked out' state).
+
+After some debugging, it would seem the problem is that the lightAttack1 state doesn't have any interactions. Why would that be? It's because I forgot to remove the check that only adds a transition interaction if you are an end frame state!
+
+And now we get a frontend crash that I'm perfectly happy with because it's on lightAttack3! Woo! And using just my editor, I was able to quickly draft up an animation for it (though I once again need to normalize the frame width on the source sprite sheet OR figure out a way to customize frame size per animation frame--I would rather just fix up the sprite sheet).
+
+That's awesome!
+
+Next, I said I wanted to make an editor on the frontend for defining a new attack state and use that to make an actual new attack state. So let's get cracking on that.

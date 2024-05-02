@@ -7,6 +7,8 @@ import {
 } from './CharacterFileInterface';
 import CharacterTemplate from './CharacterTemplate';
 import CollisionEntity from './CollisionEntity';
+import AttackDescriptionReader from './animation_description_reader/AttackDescriptionReader';
+import FileAttackAnimationDescription from './animation_description_reader/FileAttackAnimationDescription';
 import StateInteraction from './state_interaction/StateInteraction';
 
 function getAnimationStateID(animationName: string, orderIndex: number) {
@@ -115,12 +117,24 @@ function getAnimationStates(
  * will be given names X1, X2, ....
  */
 function getAnimationGraph(
-  characterData: FileAnimationDescription[],
+  characterData: (FileAnimationDescription | FileAttackAnimationDescription)[],
   globalInteractionsMap: Map<string, StateInteractionDescription>,
 ): Map<string, AnimationState> {
   const animationMap = new Map<string, AnimationState>();
   characterData.forEach((animationDescription) => {
-    const generatedStates = getAnimationStates(animationDescription, globalInteractionsMap);
+    let generatedStates;
+    if (animationDescription.type === 'attack') {
+      generatedStates = new AttackDescriptionReader()
+        .getAnimationStates(
+          animationDescription as FileAttackAnimationDescription,
+          globalInteractionsMap,
+        );
+    } else {
+      generatedStates = getAnimationStates(
+        animationDescription as FileAnimationDescription,
+        globalInteractionsMap,
+      );
+    }
     generatedStates.forEach((generatedState) => {
       animationMap.set(generatedState.id, generatedState);
     });

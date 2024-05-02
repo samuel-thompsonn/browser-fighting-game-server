@@ -258,7 +258,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "lightAttackStartup"
+              "value": "lightAttack"
             },
             {
               "argName": "resolutionType",
@@ -472,10 +472,10 @@
           }
         ],
         "effects": {
-            "move": {
-                "x": 1.0,
-                "y": 0
-            }
+          "move": {
+            "x": 1.0,
+            "y": 0
+          }
         }
       }
     },
@@ -658,153 +658,62 @@
       }
     },
     {
-      "name": "startup lag for light attacking",
-      "id": "lightAttackStartup",
-      "numFrames": 2,
-      "state": {
-        "importedInteractions": [
-          {
-            "id": "vulnerableToHit",
-            "priority": 100
-          }
-        ],
-        "interactions": [
-          {
-            "name": "switch to active light attack immediately after this ends",
-            "id": "lightAttackAfterEnd",
-            "priority": 1,
-            "conditions": [],
-            "effects": [
-              {
-                "effectType": "setNextState",
-                "args": [
-                  {
-                    "argName": "destination",
-                    "value": "lightAttack"
-                  },
-                  {
-                    "argName": "resolutionType",
-                    "value": "afterEnd"
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "collisions": [
-          {
-            "entityType": "hurtbox",
-            "rectangles": [
-              {
-                "x": 0.215,
-                "y": 0.05,
-                "width": 0.51,
-                "height": 1.5
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "lightAttack",
+      "name": "light attack",
       "id": "lightAttack",
-      "numFrames": 2,
+      "type": "attack",
+      "numFrames": {
+        "startup": 2,
+        "active": 2,
+        "end": 2
+      },
+      "destinationState": "idle",
       "state": {
-        "importedInteractions": [
-          {
-            "id": "vulnerableToHit",
-            "priority": 100
-          }
-        ],
-        "interactions": [
-          {
-            "name": "switch to end lag Left immediately after this ends",
-            "id": "endLagAfterEnd",
-            "priority": 1,
-            "conditions": [],
-            "effects": [
-              {
-                "effectType": "setNextState",
-                "args": [
-                  {
-                    "argName": "destination",
-                    "value": "lightAttackEndLag"
-                  },
-                  {
-                    "argName": "resolutionType",
-                    "value": "afterEnd"
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "collisions": [
-          {
-            "entityType": "hurtbox",
-            "rectangles": [
-              {
-                "x": 0.215,
-                "y": 0.05,
-                "width": 0.51,
-                "height": 1.5
-              }
-            ]
-          },
-          {
-            "entityType": "hitbox",
-            "properties": [
-              {
-                "propertyName": "damage",
-                "propertyValue": "10"
-              },
-              {
-                "propertyName": "knockback",
-                "propertyValue": "1.0"
-              }
-            ],
-            "rectangles": [
-              {
-                "x": 0.75,
-                "y": 0.25,
-                "width": 0.5,
-                "height": 0.25
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "end lag for attacking left",
-      "id": "lightAttackEndLag",
-      "numFrames": 2,
-      "state": {
-        "importedInteractions": [
-          {
-            "id": "vulnerableToHit",
-            "priority": 100
-          },
-          {
-            "id": "defaultToIdle",
-            "priority": 10
-          }
-        ],
-        "interactions": [],
-        "collisions": [
-          {
-            "entityType": "hurtbox",
-            "rectangles": [
-              {
-                "x": 0.215,
-                "y": 0.05,
-                "width": 0.51,
-                "height": 1.5
-              }
-            ]
-          }
-        ]
+        "importedInteractions": {
+          "general": [
+            {
+              "id": "vulnerableToHit",
+              "priority": 100
+            }
+          ]
+        },
+        "collisions": {
+          "general": [
+            {
+              "entityType": "hurtbox",
+              "rectangles": [
+                {
+                  "x": 0.215,
+                  "y": 0.05,
+                  "width": 0.51,
+                  "height": 1.5
+                }
+              ]
+            }
+          ],
+          "active": [
+            {
+              "entityType": "hitbox",
+              "properties": [
+                {
+                  "propertyName": "damage",
+                  "propertyValue": "10"
+                },
+                {
+                  "propertyName": "knockback",
+                  "propertyValue": "1.0"
+                }
+              ],
+              "rectangles": [
+                {
+                  "x": 0.75,
+                  "y": 0.25,
+                  "width": 0.5,
+                  "height": 0.25
+                }
+              ]
+            }
+          ]
+        }
       }
     },
     {
