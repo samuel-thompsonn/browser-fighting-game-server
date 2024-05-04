@@ -83,6 +83,10 @@ function getStateInteractions(
   if (animationDescription.state.importedInteractions) {
     const generalImportedInteractions = animationDescription
       .state.importedInteractions.general || [];
+    generalImportedInteractions.push({
+      id: 'vulnerableToHit',
+      priority: 100,
+    });
     const frameTypeImportedInteractions = animationDescription
       .state.importedInteractions[frameType] || [];
     const importedInteractions = generalImportedInteractions.concat(frameTypeImportedInteractions);
