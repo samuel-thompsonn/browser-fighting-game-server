@@ -668,14 +668,6 @@
       },
       "destinationState": "idle",
       "state": {
-        "importedInteractions": {
-          "general": [
-            {
-              "id": "vulnerableToHit",
-              "priority": 100
-            }
-          ]
-        },
         "collisions": {
           "general": [
             {
