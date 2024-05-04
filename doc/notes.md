@@ -1897,8 +1897,9 @@ I think I've got most of the new reader put together. I just am having some prob
 
 ## 5/1/2024
 
-9:15 pm - 9:17 pm
-9:55 pm - 11:08 pm
+9:15 pm - 9:17 pm (2m)
+9:55 pm - 11:08 pm (1h13m, 1h15m total)
+11:22 pm - 12:18 pm (56m, 2h11m total)
 
 I'm getting the new character file reader to compile. Right now it seems that the state I put in characterASimple doesn't count as the FileAttackAnimationDescription type for some reason.
 
@@ -1917,3 +1918,58 @@ And now we get a frontend crash that I'm perfectly happy with because it's on li
 That's awesome!
 
 Next, I said I wanted to make an editor on the frontend for defining a new attack state and use that to make an actual new attack state. So let's get cracking on that.
+
+When I left off, I was adding controls to the character editor for defining state behavior in the backend like hitboxes and backend frame data. I will continue that so that we have one integrated animation editor.
+
+## 5/3/2024
+
+8:48 pm - 9:05 pm (17m)
+9:41 pm - 
+
+My next objective is to add controls for defining the corresponding backend state when I'm making a frontend state.
+
+This involves a lot of work modifying large objects representing the entire character file definition, so I want to figure out what is the React recommended way of doing that. It looks like there's some React documentation to advise on this: [Updating objects in state](https://react.dev/learn/updating-objects-in-state), [Updating arrays in state](https://react.dev/learn/updating-arrays-in-state).
+
+Apparently there's a cool package called Immer that abstracts a lot of this away, so I kind of want to try that with the behavior state. So let's go ahead and learn!
+
+First I want to do some de-cluttering on the character editor page though. Actually, I'll save that for second. For now I am really interested in meaningfull editing character behavior in the browser!
+
+I didn't really think it was appropriate to mess around with Immer because most of the state changes are taking place in controlled components through props rather than through state.
+
+...But now I realize that I can probably just pass an Immer hook down through the state. Dang, I want to try that but I'm too lazy to refactor. For now I'll just focus on hooking in the rest of the state for editing and making it so you can add a new state too.
+
+I've wired up the general mechanism for making state updates to attack behavior states, which is great. Next I want to visualize the hitboxes in the animation tester.
+
+After some hard work, I'm now successfully rendering collision data with the animation state. Let me just add a toggle in case it gets annoying or I want to scrutinize the animation itself. Done. And I just tested it and can see that the hurtbox adjusts dynamically on the animation tester based on how you set the hitbox. Awesome!
+
+I have all the fields set up now. So let's try making an animation state for the high light kick! Observations:
+
+- I start in paint.net by spacing the sprites evenly in the animation
+- In the editor, I start with approximate x and y
+- Then I set # of states per frame and # of frames to get the correct number of yellow boxes
+- Then I set the stride, then start messing with frame width and offset to get things even
+- I focus on the horizontal alignment first, then on the vertical
+- I try to get Ryu centered in the frames, and it looks nicer with a little margin
+- I need centering too, but I guess I can adjust this in the source for now.
+
+But I'm stopped right there (with the animations done!) because I need to make it so that spawning a new state makes a new Attack state by default! Here's my current params:
+
+- offset x: 454
+- offset y: 1085
+- frame width: 75
+- frame height: 88
+- stride: 81
+- states per frame: 3
+- number of frames: 9
+
+I also notice that I want more startup lag and less end lag, and right now the only way I can do that is by adding more sprites. So maybe I should have some way to directly parameterize startup lag?
+
+For now I've just made it so that the + (new state) button copies the one you are currently on.
+
+Another note: I still need to manually update the flipped sprite sheet too, or else I'll just get null or broken animations. Maybe I can make a Python script for that or something.
+
+And I ran into another problem: If I mess up the source at any point, I lose all my progress. And I need to mess with the source to get the center working. Probably the best solution is to make it so that the source just doesn't try to update anything if it fails to parse the JSON.
+
+Okay, that's squared away. I'm tired, so I'll add the center configuration later.
+
+And now I've successfully added a new attack to Ryu (though without figuring out the controls :p) in less than 10 minutes! This is awesome and it should let me improve the gameplay really quickly! I should commit what I have before I lose something important! Beyond that I'm just awfully tired to continue.

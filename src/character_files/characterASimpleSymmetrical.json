@@ -258,7 +258,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "lightAttack"
+              "value": "lightHighKick"
             },
             {
               "argName": "resolutionType",
@@ -473,7 +473,7 @@
         ],
         "effects": {
           "move": {
-            "x": 1.0,
+            "x": 1,
             "y": 0
           }
         }
@@ -1091,6 +1091,57 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "name": "light attack",
+      "id": "lightHighKick",
+      "type": "attack",
+      "numFrames": {
+        "startup": 3,
+        "active": 3,
+        "end": 3
+      },
+      "destinationState": "idle",
+      "state": {
+        "collisions": {
+          "general": [
+            {
+              "entityType": "hurtbox",
+              "rectangles": [
+                {
+                  "x": 0.215,
+                  "y": 0.05,
+                  "width": 0.51,
+                  "height": 1.5
+                }
+              ]
+            }
+          ],
+          "active": [
+            {
+              "entityType": "hitbox",
+              "properties": [
+                {
+                  "propertyName": "damage",
+                  "propertyValue": "15"
+                },
+                {
+                  "propertyName": "knockback",
+                  "propertyValue": "2"
+                }
+              ],
+              "rectangles": [
+                {
+                  "x": 0.75,
+                  "y": -0.05,
+                  "width": 0.5,
+                  "height": 0.45
+                }
+              ]
+            }
+          ]
+        }
       }
     }
   ]
