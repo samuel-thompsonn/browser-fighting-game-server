@@ -19,9 +19,6 @@ const STAGE_X_OFFSET = -50;
 function applyCharacterMovement(deltaPositions: Map<Character, Position>): void {
   deltaPositions.forEach((deltaPosition: Position, character: Character) => {
     const currentPosition = character.getPosition();
-    if (character.getCharacterID() === 'PlayerID1') {
-      // console.log(`deltaPosition for character PlayerID1: ${JSON.stringify(deltaPosition)}`);
-    }
     character.setPosition({
       x: currentPosition.x + deltaPosition.x,
       y: currentPosition.y + deltaPosition.y,
