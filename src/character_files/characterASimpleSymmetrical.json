@@ -258,7 +258,7 @@
           "args": [
             {
               "argName": "destination",
-              "value": "lightHighKick"
+              "value": "lightAttack"
             },
             {
               "argName": "resolutionType",
@@ -330,6 +330,77 @@
             {
               "argName": "destination",
               "value": "lightKickStartup"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "crouching light kick when pressing lightAttack",
+      "id": "crouchLightKickControls",
+      "priority": 60,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "lightAttack"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "crouchLightKick"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "light high kick when pressing lightAttack + up",
+      "id": "lightHighKick",
+      "priority": 60,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "lightAttack"
+            }
+          ]
+        },
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "moveUp"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "lightHighKick"
             },
             {
               "argName": "resolutionType",
@@ -555,6 +626,10 @@
           {
             "id": "vulnerableToHit",
             "priority": 100
+          },
+          {
+            "id": "crouchLightKickControls",
+            "priority": 55
           }
         ],
         "interactions": [
@@ -1137,6 +1212,57 @@
                   "y": -0.05,
                   "width": 0.5,
                   "height": 0.45
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "crouching light attack",
+      "id": "crouchLightKick",
+      "type": "attack",
+      "numFrames": {
+        "startup": 2,
+        "active": 2,
+        "end": 2
+      },
+      "destinationState": "crouching",
+      "state": {
+        "collisions": {
+          "general": [
+            {
+              "entityType": "hurtbox",
+              "rectangles": [
+                {
+                  "x": 0.315,
+                  "y": 0.55,
+                  "width": 0.51,
+                  "height": 1.1
+                }
+              ]
+            }
+          ],
+          "active": [
+            {
+              "entityType": "hitbox",
+              "properties": [
+                {
+                  "propertyName": "damage",
+                  "propertyValue": "6"
+                },
+                {
+                  "propertyName": "knockback",
+                  "propertyValue": "1"
+                }
+              ],
+              "rectangles": [
+                {
+                  "x": 0.95,
+                  "y": 1.35,
+                  "width": 0.5,
+                  "height": 0.35
                 }
               ]
             }
