@@ -23,17 +23,6 @@ function getAnimationStateID(animationName: string, orderIndex: number) {
 
 const CHARACTER_SIZE = 64;
 
-function movementDirectionToFactor(direction: Direction): number {
-  switch (direction) {
-    case Direction.LEFT:
-      return -1;
-    case Direction.RIGHT:
-      return 1;
-    default:
-      throw new Error(`No movement factor defined for direction ${direction}`);
-  }
-}
-
 const MAX_FRICTION_ACCELERATION = 1600;
 
 const oppositeWithMaximum = (value: number, max: number) => (
@@ -207,11 +196,10 @@ export default class Character implements CharacterInternal {
     relevantInfo: TransitionInfo,
     elapsedSeconds: number,
   ): void {
-    const movementDirectionFactor = movementDirectionToFactor(this.#direction);
     // TODO: Add friction deceleration
     const frictionAcceleration = getFrictionAcceleration(this.#velocity, elapsedSeconds);
     const totalAcceleration = {
-      x: (this.#acceleration.x * movementDirectionFactor * this.#movementAcceleration)
+      x: (this.#acceleration.x * this.#movementAcceleration)
         + frictionAcceleration.x,
       y: (this.#acceleration.y * this.#movementAcceleration)
         + frictionAcceleration.y,
@@ -398,5 +386,9 @@ export default class Character implements CharacterInternal {
       healthInfo: this.#healthInfo,
       collisionInfo: this.#serializeCollisions(),
     };
+  }
+
+  getDirection() {
+    return this.#direction;
   }
 }

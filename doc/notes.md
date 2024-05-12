@@ -2055,3 +2055,7 @@ I also see no reason to cap the player's vertical velocity, so I removed that. N
 Last time I was working on adding midair movement. But I have a problem where the movement pipeline always multiplies movement by the direction factor, so when I have the character move in negative X direction when pressing moveLeft, we actually move right if we're facing left. So what's the solution? I should add an option to the definition for an acceleration effect that lets you ignore direction.
 
 That would involve modifying the movement pipeline so that we can parameterize the direction effect on movement. But that should be doable--it just requires me to parameterize whether to involve direction.
+
+I can probably add a method to get player direction and then use that to apply the sign for the acceleration. And sure enough, it worked! Now let's add the movement for the other direction, and then let's also add a transition from running to jumping.
+
+And now I've added both those things, and it was actually very simple and totally without code changes. Pretty cool.

@@ -702,6 +702,41 @@
                   {
                     "argName": "acceleration",
                     "value": "-1.0"
+                  },
+                  {
+                    "argName": "applyDirection",
+                    "value": "false"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "accelerate right when pressing right",
+            "id": "accelerateRightInAir",
+            "priority": 201,
+            "conditions": [
+              {
+                "conditionType": "controls",
+                "args": [
+                  {
+                    "argName": "control",
+                    "value": "moveRight"
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "accelerate",
+                "args": [
+                  {
+                    "argName": "acceleration",
+                    "value": "1.0"
+                  },
+                  {
+                    "argName": "applyDirection",
+                    "value": "false"
                   }
                 ]
               }
@@ -752,6 +787,10 @@
           {
             "id": "vulnerableToHit",
             "priority": 100
+          },
+          {
+            "id": "jump",
+            "priority": 55
           }
         ],
         "interactions": [

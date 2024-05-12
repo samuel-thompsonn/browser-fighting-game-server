@@ -10,6 +10,7 @@ interface CharacterInternal {
   setDirection: (newDirection: Direction) => void;
   setNextState: (stateID: string, resolutionType: string) => void;
   getKnockbackStrength: () => number;
+  getDirection: () => Direction
 }
 
 export default CharacterInternal;
