@@ -14,5 +14,9 @@
   {
     "nickname": "setDirection",
     "className": "DirectionEffect"
+  },
+  {
+    "nickname": "accelerate",
+    "className": "AccelerationEffect"
   }
 ]

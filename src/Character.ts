@@ -34,6 +34,16 @@ function movementDirectionToFactor(direction: Direction): number {
   }
 }
 
+const MAX_FRICTION_ACCELERATION = 1600;
+
+const oppositeWithMaximum = (value: number, max: number) => (
+  Math.min(Math.abs(value), max) * -Math.sign(value));
+
+const getFrictionAcceleration = (characterVelocity: Position, elapsedSeconds: number) => ({
+  x: oppositeWithMaximum(characterVelocity.x / elapsedSeconds, MAX_FRICTION_ACCELERATION),
+  y: 0,
+});
+
 export default class Character implements CharacterInternal {
   #animationStates: Map<string, AnimationState>;
 
@@ -49,6 +59,8 @@ export default class Character implements CharacterInternal {
 
   #movementSpeed: number;
 
+  #movementAcceleration: number;
+
   #knockbackStrength: number;
 
   #controlsMap: Map<string, boolean>;
@@ -60,16 +72,23 @@ export default class Character implements CharacterInternal {
     maxHealth: number;
   };
 
-  #currentCollision: ResolvedCollisionEvent| undefined;
+  #currentCollision: ResolvedCollisionEvent | undefined;
+
+  #hasFloorCollision: boolean;
 
   #nextStateID: string | undefined;
 
   #deltaPosition: Position;
 
+  #acceleration: Position;
+
+  #velocity: Position;
+
   constructor(
     characterID: string,
     startPosition: Position,
     movementSpeed: number,
+    movementAcceleration: number,
     knockbackStrength: number,
     maxHealth: number,
     animationStates: Map<string, AnimationState>,
@@ -79,6 +98,8 @@ export default class Character implements CharacterInternal {
       x: 0,
       y: 0,
     };
+    this.#acceleration = { x: 0, y: 0 };
+    this.#velocity = { x: 0, y: 0 };
     this.#knockbackStrength = knockbackStrength;
     this.#nextStateID = undefined;
     this.#dimensions = {
@@ -94,6 +115,7 @@ export default class Character implements CharacterInternal {
     };
     this.#position = startPosition;
     this.#movementSpeed = movementSpeed;
+    this.#movementAcceleration = movementAcceleration;
     this.#animationStates = animationStates;
     this.#direction = Direction.LEFT;
     const initialState = this.#animationStates.get(initialStateID);
@@ -101,6 +123,7 @@ export default class Character implements CharacterInternal {
       throw new Error(`Initial state ${initialStateID} not found in states map!`);
     }
     this.#currentState = initialState;
+    this.#hasFloorCollision = false;
   }
 
   getCharacterID(): string {
@@ -120,10 +143,22 @@ export default class Character implements CharacterInternal {
     this.#notifyListeners();
   }
 
+  setVelocity(newVelocity: Position): void {
+    this.#velocity = newVelocity;
+  }
+
   changePosition(deltaPosition: Position): void {
     this.#deltaPosition = {
       x: this.#deltaPosition.x + deltaPosition.x,
       y: this.#deltaPosition.y + deltaPosition.y,
+    };
+  }
+
+  changeAcceleration(deltaAcceleration: Position): void {
+    console.log(`Updating acceleration. deltaAcceleration: ${JSON.stringify(deltaAcceleration)}`);
+    this.#acceleration = {
+      x: this.#acceleration.x + deltaAcceleration.x,
+      y: this.#acceleration.y + deltaAcceleration.y,
     };
   }
 
@@ -153,9 +188,10 @@ export default class Character implements CharacterInternal {
     if (this.#currentCollision) {
       resolvedCollisions.push(this.#currentCollision);
     }
-    const interactionInfo:InteractionInfo = {
+    const interactionInfo: InteractionInfo = {
       characterID: this.#characterID,
       controlsMap: this.#controlsMap,
+      terrainCollisions: this.#hasFloorCollision,
       currentCollisions: resolvedCollisions,
       characterStatus: this.#getCharacterStatus(),
     };
@@ -163,6 +199,7 @@ export default class Character implements CharacterInternal {
       interaction.execute(this, interactionInfo);
     });
     this.#currentCollision = undefined;
+    this.#hasFloorCollision = false;
   }
 
   updateSelf(
@@ -170,21 +207,46 @@ export default class Character implements CharacterInternal {
     relevantInfo: TransitionInfo,
     elapsedSeconds: number,
   ): void {
-    if (this.#currentState.effects) {
-      if (this.#currentState.effects.move) {
-        const movementAmount = this.#currentState.effects.move;
-        const movementDirectionFactor = movementDirectionToFactor(this.#direction);
-        this.changePosition({
-          x: movementAmount.x * this.#movementSpeed * movementDirectionFactor * elapsedSeconds,
-          y: movementAmount.y * this.#movementSpeed * movementDirectionFactor * elapsedSeconds,
-        });
-      }
-    }
+    const movementDirectionFactor = movementDirectionToFactor(this.#direction);
+    // TODO: Add friction deceleration
+    const frictionAcceleration = getFrictionAcceleration(this.#velocity, elapsedSeconds);
+    const totalAcceleration = {
+      x: (this.#acceleration.x * movementDirectionFactor * this.#movementAcceleration)
+        + frictionAcceleration.x,
+      y: (this.#acceleration.y * this.#movementAcceleration)
+        + frictionAcceleration.y,
+    };
+    // TODO: Come up with a solution here that separates speed from movement
+    //   from speed as a result of getting hit or something (not yet implemented)
+    //   so that you can have a max movement speed
+    //   Probably need a separate variable for pending movement acceleration vs.
+    //   pending environmental acceleration.
+    const newVelocity = {
+      x: this.#velocity.x + (totalAcceleration.x * elapsedSeconds),
+      y: this.#velocity.y + (totalAcceleration.y * elapsedSeconds),
+    };
+    const newVelocityMagnitude = {
+      x: Math.abs(newVelocity.x),
+      y: Math.abs(newVelocity.y),
+    };
+    const newVelocitySign = {
+      x: Math.sign(newVelocity.x),
+      y: Math.sign(newVelocity.y),
+    };
+    this.#velocity = {
+      x: Math.min(newVelocityMagnitude.x, this.#movementSpeed) * newVelocitySign.x,
+      y: newVelocityMagnitude.y * newVelocitySign.y,
+    };
+    this.#deltaPosition = {
+      x: this.#deltaPosition.x + this.#velocity.x * elapsedSeconds,
+      y: this.#deltaPosition.y + this.#velocity.y * elapsedSeconds,
+    };
     gameInterface.moveCharacter(this, this.#deltaPosition);
     this.#deltaPosition = {
       x: 0,
       y: 0,
     };
+    this.#acceleration = { x: 0, y: 0 };
     this.#handleInteractions();
     if (!this.#nextStateID) { return; }
     this.#setState(this.#nextStateID);
@@ -228,7 +290,7 @@ export default class Character implements CharacterInternal {
     }
   }
 
-  #setState(newStateID:string) {
+  #setState(newStateID: string) {
     const nextState = this.#animationStates.get(newStateID);
     if (!nextState) {
       throw new Error(`Attempted to transition to undefined state ${newStateID}.`);
@@ -246,7 +308,7 @@ export default class Character implements CharacterInternal {
     return [];
   }
 
-  #identifyEntities(collisionEvent:CollisionEvent) {
+  #identifyEntities(collisionEvent: CollisionEvent) {
     let selfEntity = collisionEvent.firstEntity;
     let otherEntity = collisionEvent.secondEntity;
     if (collisionEvent.secondEntity.characterID === this.#characterID) {
@@ -259,7 +321,11 @@ export default class Character implements CharacterInternal {
     };
   }
 
-  registerCollision(collisionEvent:CollisionEvent): void {
+  registerTerrainCollision(): void {
+    this.#hasFloorCollision = true;
+  }
+
+  registerCollision(collisionEvent: CollisionEvent): void {
     const { selfEntity, otherEntity } = this.#identifyEntities(collisionEvent);
     this.#currentCollision = {
       selfEntity: {
@@ -303,7 +369,7 @@ export default class Character implements CharacterInternal {
   }
 
   #serializeCollisions(): FileCollisionItem[] {
-    const serializedCollisions:FileCollisionItem[] = [];
+    const serializedCollisions: FileCollisionItem[] = [];
     this.#currentState.collisions?.forEach((collisionEntity) => {
       serializedCollisions.push(
         this.resolveCollisionEntity(collisionEntity).getJSONSerialized(),
