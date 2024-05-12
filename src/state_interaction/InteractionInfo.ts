@@ -3,6 +3,7 @@ import { CharacterStatus, ResolvedCollisionEvent } from '../CharacterDataInterfa
 interface InteractionInfo {
   characterID: string;
   currentCollisions: ResolvedCollisionEvent[];
+  terrainCollisions: boolean;
   controlsMap: Map<string, boolean>;
   characterStatus: CharacterStatus;
 }

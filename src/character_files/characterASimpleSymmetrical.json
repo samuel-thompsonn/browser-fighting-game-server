@@ -3,7 +3,8 @@
   "initialState": "idle",
   "symmetrical": true,
   "stats": {
-    "movementSpeed": 200,
+    "movementSpeed": 250,
+    "movementAcceleration": 2400,
     "maxHealth": 100,
     "knockbackStrength": 50
   },
@@ -440,6 +441,54 @@
           ]
         }
       ]
+    },
+    {
+      "name": "jump when pressing space",
+      "id": "jump",
+      "priority": 60,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "jump"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "jump"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "accelerate downward",
+      "id": "applyGravity",
+      "priority": 200,
+      "conditions": [],
+      "effects": [
+        {
+          "effectType": "accelerate",
+          "args": [
+            {
+              "argName": "accelerationY",
+              "value": "1.0"
+            }
+          ]
+        }
+      ]
     }
   ],
   "animations": [
@@ -480,9 +529,185 @@
           {
             "id": "lightKick",
             "priority": 50
+          },
+          {
+            "id": "jump",
+            "priority": 55
           }
         ],
         "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "jump",
+      "id": "jump",
+      "numFrames": 1,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          }
+        ],
+        "interactions": [
+          {
+            "name": "accelerate upward when jumping",
+            "id": "accelerateUp",
+            "priority": 200,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "accelerate",
+                "args": [
+                  {
+                    "argName": "accelerationY",
+                    "value": "-7.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "transition to midair after jumping",
+            "id": "transitionToMidair",
+            "priority": 100,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "midair"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "midair",
+      "id": "midair",
+      "numFrames": 4,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "vulnerableToHit",
+            "priority": 100
+          },
+          {
+            "id": "applyGravity",
+            "priority": 120
+          }
+        ],
+        "interactions": [
+          {
+            "name": "stay in midair state",
+            "id": "stayInMidair",
+            "priority": 20,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "midair"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "afterEnd"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "go to idle state once landed",
+            "id": "idleWhenLanded",
+            "priority": 20,
+            "conditions": [
+              {
+                "conditionType": "terrainCollision",
+                "args": []
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "idle"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "interrupt"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "accelerate left when pressing left",
+            "id": "accelerateLeftInAir",
+            "priority": 200,
+            "conditions": [
+              {
+                "conditionType": "controls",
+                "args": [
+                  {
+                    "argName": "control",
+                    "value": "moveLeft"
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "accelerate",
+                "args": [
+                  {
+                    "argName": "acceleration",
+                    "value": "-1.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
         "collisions": [
           {
             "entityType": "hurtbox",
@@ -529,6 +754,25 @@
             "priority": 100
           }
         ],
+        "interactions": [
+          {
+            "name": "accelerate forward when moving",
+            "id": "accelerateForward",
+            "priority": 15,
+            "conditions": [],
+            "effects": [
+              {
+                "effectType": "accelerate",
+                "args": [
+                  {
+                    "argName": "acceleration",
+                    "value": "1.0"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
         "collisions": [
           {
             "entityType": "hurtbox",
@@ -541,13 +785,7 @@
               }
             ]
           }
-        ],
-        "effects": {
-          "move": {
-            "x": 1,
-            "y": 0
-          }
-        }
+        ]
       }
     },
     {

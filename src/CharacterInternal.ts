@@ -6,6 +6,7 @@ interface CharacterInternal {
   getPosition: () => Position;
   setPosition: (newPosition: Position) => void;
   changePosition: (deltaPosition: Position) => void;
+  changeAcceleration: (deltaAcceleration: Position) => void
   setDirection: (newDirection: Direction) => void;
   setNextState: (stateID: string, resolutionType: string) => void;
   getKnockbackStrength: () => number;

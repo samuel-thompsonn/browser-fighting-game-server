@@ -10,5 +10,9 @@
   {
     "nickname": "health",
     "className": "HealthCondition"
+  },
+  {
+    "nickname": "terrainCollision",
+    "className": "TerrainCollisionCondition"
   }
 ]

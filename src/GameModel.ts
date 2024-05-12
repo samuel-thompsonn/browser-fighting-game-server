@@ -19,16 +19,28 @@ const STAGE_X_OFFSET = -50;
 function applyCharacterMovement(deltaPositions: Map<Character, Position>): void {
   deltaPositions.forEach((deltaPosition: Position, character: Character) => {
     const currentPosition = character.getPosition();
-    character.setPosition({
+    const nextPosition = {
       x: currentPosition.x + deltaPosition.x,
       y: currentPosition.y + deltaPosition.y,
-    });
+    };
+    if (nextPosition.y > 0) {
+      nextPosition.y = 0;
+      character.setVelocity({
+        x: deltaPosition.x,
+        y: 0,
+      });
+    }
+    character.setPosition(nextPosition);
   });
 }
 
 function setContains<T>(set: Set<T>, possibleSubset: Set<T>) {
   return Array.from(possibleSubset).every((item) => set.has(item));
 }
+
+const characterCollidingWithFloor = (character: Character, deltaPosition: Position) => (
+  character.getPosition().y + deltaPosition.y > 0
+);
 
 export default class GameModel implements GameInstance, GameInternal, CharacterListener {
   #expectedPlayers: Set<string>;
@@ -191,6 +203,9 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
     this.#characters.forEach((outerCharacter) => {
       const outerDeltaPosition = deltaPositions.get(outerCharacter);
       if (!outerDeltaPosition) { return; }
+      if (characterCollidingWithFloor(outerCharacter, outerDeltaPosition)) {
+        outerCharacter.registerTerrainCollision();
+      }
       this.#characters.forEach((innerCharacter) => {
         if (innerCharacter === outerCharacter) { return; }
         const innerDeltaPosition = deltaPositions.get(innerCharacter);
@@ -198,7 +213,6 @@ export default class GameModel implements GameInstance, GameInternal, CharacterL
         const outerCollisionData = outerCharacter.getCollisionData();
         const innerCollisionData = innerCharacter.getCollisionData();
         if (!(outerCollisionData && innerCollisionData)) { return; }
-        // Check for collisions:
         const detectedCollision = BasicCollisionChecker.hasCollision(
           outerCharacter,
           outerCollisionData,

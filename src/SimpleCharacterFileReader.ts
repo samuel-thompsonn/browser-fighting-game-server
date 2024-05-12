@@ -91,7 +91,6 @@ function getAnimationState(
       stateID: animationDescription.id,
     },
     interactions: stateInteractions,
-    effects: animationDescription.state.effects,
     collisions: stateCollisions,
   };
 }
@@ -153,6 +152,7 @@ export default class SimpleCharacterFileReader {
     const animationGraph = getAnimationGraph(characterData.animations, globalInteractionsMap);
     return new CharacterTemplate(
       characterData.stats.movementSpeed,
+      characterData.stats.movementAcceleration,
       characterData.stats.knockbackStrength,
       characterData.stats.maxHealth,
       animationGraph,

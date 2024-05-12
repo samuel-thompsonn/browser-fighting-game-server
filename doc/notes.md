@@ -1924,7 +1924,7 @@ When I left off, I was adding controls to the character editor for defining stat
 ## 5/3/2024
 
 8:48 pm - 9:05 pm (17m)
-9:41 pm - 
+9:41 pm - 12:40 pm (2h59m, total 3h16m)
 
 My next objective is to add controls for defining the corresponding backend state when I'm making a frontend state.
 
@@ -1973,3 +1973,85 @@ And I ran into another problem: If I mess up the source at any point, I lose all
 Okay, that's squared away. I'm tired, so I'll add the center configuration later.
 
 And now I've successfully added a new attack to Ryu (though without figuring out the controls :p) in less than 10 minutes! This is awesome and it should let me improve the gameplay really quickly! I should commit what I have before I lose something important! Beyond that I'm just awfully tired to continue.
+
+## 5/4/2024
+
+5:00 pm - 5:57 pm (57m)
+6:30 pm - 7:30 pm (1h, 57m total)
+
+What can I do now to make it easier to define attack states?
+
+- DONE Allow hiding source code
+- Allow defining the key presses to go to the attack (skipping for now)
+- DONE Add control for the state to return to (for crouching attacks)
+- Panning the canvas
+- Add control for animation center
+- Ergonomics and layout
+
+Now I'm running into an issue defining character controls where it seems we can't do the low kick in the editor even if I hard code the controls to be moveDown+lightAttack. Why is this? It seems the problem has something to do with the interactions library being undefined for some reason.
+
+The problem was that I accidentally duplicated the ID for the light kick interaction, so it was using the wrong light kick interaction in the wrong place. I fixed it. Glad it wasn't a problem in the code, but I should probably make it throw an error when there's duplicate IDs.
+
+I went ahead and added a light crouching kick so you can poke people while crouching, so that's good.
+
+## 5/5/2024
+
+10:33 am - 11:05 am (32m)
+11:22 am - 12:02 pm (40m, total 1h12m)
+
+For the sake of consistent progress, let's add another attack to the character if it's appropriate.
+
+What even is a reasonable set of 'moves' to define a character?
+
+- jab (light directionless attack)
+  - can be multi-hit
+- heavy jab (heavy directionless attack)
+- tilts (light directional attack)
+  - down tilt (hits crouching enemy)
+  - forward tilt (hits more forward)
+  - up tilt (hits enemies in the air)
+- heavies (heavy directional attack)
+  - up heavy (hits upward)
+  - down heavy (hits both sides)
+  - forward heavy (strong hit)
+- AERIALS
+- blocking
+- grabs/throws?
+
+I also have this cool idea of making moves modular so that you can have either a roguelike or a Hearthstone Arena aspect where you draft up a character from random moves (some better, some worse) and use it to fight people.
+
+I'm also interested in adding jumping and aerial movement. So I should probably re-configure the movement system to use momentum instead of having player states directly control position all the time. And I should add gravity and a falling state. I guess we can get started on that!
+
+The first thing to do is get rid of the existing movement effect syntax. Instead I want to do movement through unconditional interaction effects involve acceleration.
+
+## 5/6/2024
+
+I was working on adding acceleration. I think I left a note for myself on where I left off. The problem is probably that I'm not actually sourcing the 'acceleration' stat from anywhere. How does the interaction library actually work?
+
+The actual problem is that I was trying to grab the acceleration value from the context of the interaction when in reality I should just be using the value stored in the interaction instance itself.
+
+## 5/7/2024
+
+8:15 pm - 8:46 pm (31m)
+9:31 pm - 9:35 pm (4m)
+10:44 pm - 10:45 pm (1m)
+10:50 pm - 10:52 pm (2m)
+10:54 pm - 
+
+I am trying to add jumping and falling to the game. Right now when you jump you accelerate infinitely into the air, which is not what I want. So I'm adding another state, midair, which doesn't apply upward acceleration.
+
+With that comes ground collision. And while I'm tempted to put ground collision's effect on physics in the game code directly instead of defining it using the character file. But I also want to add state transitions that depend on colliding with the ground--mainly that when you are falling and collide with the ground you transition to a landing state.
+
+This makes me realize that I can probably make a separate character class implementing the same interface which hard-codes many of the interactions and is parameterized by a more structured character data file like one that just defines certain parameters about jump states or specific attacks like tilts, smashes (heavies) etc.
+
+Anyway, let's not get away from the goal--when you hit the ground, it should provide a condition signal.
+
+This entire time I was multiplying the y component of acceleration by the directional movement factor. That's what's been causing all this buggy behavior where we sometimes go down and sometimes up!
+
+I also see no reason to cap the player's vertical velocity, so I removed that. Next, I can work on allowing the player to move around in the air, and then maybe I can try adding an attack in the air!
+
+## 5/11/2024
+
+Last time I was working on adding midair movement. But I have a problem where the movement pipeline always multiplies movement by the direction factor, so when I have the character move in negative X direction when pressing moveLeft, we actually move right if we're facing left. So what's the solution? I should add an option to the definition for an acceleration effect that lets you ignore direction.
+
+That would involve modifying the movement pipeline so that we can parameterize the direction effect on movement. But that should be doable--it just requires me to parameterize whether to involve direction.

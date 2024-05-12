@@ -104,12 +104,6 @@ export interface FileAnimationDescription {
   state: {
     importedInteractions?: ImportedInteractionDescription[];
     interactions?: StateInteractionDescription[];
-    effects?: {
-      move?: { // x and y movement are proportional to movementSpeed stat
-        x: number;
-        y: number;
-      }
-    }
     collisions?: FileCollisionItem[];
   }
 }
@@ -119,6 +113,7 @@ export interface SimpleCharacterFileData {
   initialState: string;
   stats: {
     movementSpeed: number; // Units per second
+    movementAcceleration: number; // Units per second^2
     maxHealth: number;
     knockbackStrength: number;
   },

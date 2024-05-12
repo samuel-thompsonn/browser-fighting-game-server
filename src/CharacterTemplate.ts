@@ -17,14 +17,18 @@ export default class CharacterTemplate {
 
   #initialStateID: string;
 
+  #movementAcceleration: number;
+
   constructor(
     movementSpeed: number,
+    movementAcceleration: number,
     knockbackStrength: number,
     maxHealth: number,
     animationGraph: Map<string, AnimationState>,
     initialStateID: string,
   ) {
     this.#movementSpeed = movementSpeed;
+    this.#movementAcceleration = movementAcceleration;
     this.#knockbackStrength = knockbackStrength;
     this.#maxHealth = maxHealth;
     this.#animationGraph = animationGraph;
@@ -36,6 +40,7 @@ export default class CharacterTemplate {
       characterID,
       startPosition,
       this.#movementSpeed,
+      this.#movementAcceleration,
       this.#knockbackStrength,
       this.#maxHealth,
       this.#animationGraph,
