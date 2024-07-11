@@ -2059,3 +2059,17 @@ That would involve modifying the movement pipeline so that we can parameterize t
 I can probably add a method to get player direction and then use that to apply the sign for the acceleration. And sure enough, it worked! Now let's add the movement for the other direction, and then let's also add a transition from running to jumping.
 
 And now I've added both those things, and it was actually very simple and totally without code changes. Pretty cool.
+
+Next time, I should add a Nair attack so that attacking isn't useless. After that, if I just add a shield and a grab, I think I'll actually have a pretty interesting set of moves, which bodes well for the gameplay.
+
+But for now I want to take a pivot and learn about dedicated game development tools like Godot, since I'll want something like that for the game jams.
+
+## 7/6/2024
+
+10:00 pm - 10:44 pm
+
+Let's add a Nair. Do I have a good animation to use for it? Let's see.
+
+## 7/10/2024
+
+I've now added a Nair that transitions to and from the midair state and obeys gravity. Next, I can make a landing lag state when you hit the ground while nairing. After that I want to look into dodging, rolling and grabbing. And after that I can do a shield state.

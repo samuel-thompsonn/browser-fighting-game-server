@@ -1,4 +1,4 @@
-import { FileCollisionItem, ImportedInteractionDescription } from '../CharacterFileInterface';
+import { FileCollisionItem, ImportedInteractionDescription, StateInteractionDescription } from '../CharacterFileInterface';
 
 export type FrameType = 'startup' | 'active' | 'end';
 
@@ -21,6 +21,7 @@ interface FileAttackAnimationDescription {
   destinationState: string;
   state: {
     importedInteractions?: FrameTypeMap<ImportedInteractionDescription[]>;
+    interactions?: FrameTypeMap<StateInteractionDescription[]>;
     collisions?: FrameTypeMap<FileCollisionItem[]>
   }
 }

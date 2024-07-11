@@ -657,7 +657,7 @@
           {
             "name": "go to idle state once landed",
             "id": "idleWhenLanded",
-            "priority": 20,
+            "priority": 500,
             "conditions": [
               {
                 "conditionType": "terrainCollision",
@@ -737,6 +737,37 @@
                   {
                     "argName": "applyDirection",
                     "value": "false"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "execute neutral air kick when light attacking in air",
+            "id": "neutralAirAttack",
+            "priority": 210,
+            "conditions": [
+              {
+                "conditionType": "controls",
+                "args": [
+                  {
+                    "argName": "control",
+                    "value": "lightAttack"
+                  }
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "effectType": "setNextState",
+                "args": [
+                  {
+                    "argName": "destination",
+                    "value": "neutralAirKick"
+                  },
+                  {
+                    "argName": "resolutionType",
+                    "value": "interrupt"
                   }
                 ]
               }
@@ -1545,6 +1576,122 @@
             }
           ]
         }
+      }
+    },
+    {
+      "name": "neutral air kick",
+      "id": "neutralAirKick",
+      "type": "attack",
+      "numFrames": {
+        "startup": 2,
+        "active": 2,
+        "end": 2
+      },
+      "destinationState": "midair",
+      "state": {
+        "importedInteractions": {
+          "general": [
+            {
+              "id": "applyGravity",
+              "priority": 120
+            }
+          ]
+        },
+        "interactions": {
+          "general": [
+            {
+              "name": "go to landing lag state if landing",
+              "id": "landingLagWhenLanding",
+              "priority": 20,
+              "conditions": [
+                {
+                  "conditionType": "terrainCollision",
+                  "args": []
+                }
+              ],
+              "effects": [
+                {
+                  "effectType": "setNextState",
+                  "args": [
+                    {
+                      "argName": "destination",
+                      "value": "neutralAirLandingLag"
+                    },
+                    {
+                      "argName": "resolutionType",
+                      "value": "interrupt"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "collisions": {
+          "general": [
+            {
+              "entityType": "hurtbox",
+              "rectangles": [
+                {
+                  "x": 0.315,
+                  "y": 0.55,
+                  "width": 0.51,
+                  "height": 1.1
+                }
+              ]
+            }
+          ],
+          "active": [
+            {
+              "entityType": "hitbox",
+              "properties": [
+                {
+                  "propertyName": "damage",
+                  "propertyValue": "6"
+                },
+                {
+                  "propertyName": "knockback",
+                  "propertyValue": "1"
+                }
+              ],
+              "rectangles": [
+                {
+                  "x": 0.95,
+                  "y": 1.35,
+                  "width": 0.5,
+                  "height": 0.35
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "neutral air landing lag",
+      "id": "neutralAirLandingLag",
+      "numFrames": 3,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "defaultToIdle",
+            "priority": 1
+          }
+        ],
+        "interactions": [],
+        "collisions": [
+          {
+            "entityType": "hurtbox",
+            "rectangles": [
+              {
+                "x": 0.215,
+                "y": 0.05,
+                "width": 0.51,
+                "height": 1.5
+              }
+            ]
+          }
+        ]
       }
     }
   ]

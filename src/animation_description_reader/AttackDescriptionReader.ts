@@ -101,11 +101,11 @@ function getStateInteractions(
       }
     });
   }
-  // if (animationDescription.state.interactions) {
-  //   animationDescription.state.interactions.forEach((interactionDescription) => {
-  //     interactions.push(new StateInteraction(interactionDescription));
-  //   });
-  // }
+  if (animationDescription.state.interactions) {
+    animationDescription.state.interactions.general?.forEach((interactionDescription) => {
+      interactions.push(new StateInteraction(interactionDescription));
+    });
+  }
   interactions.push(
     getTransitionInteraction(
       animationDescription.id,
