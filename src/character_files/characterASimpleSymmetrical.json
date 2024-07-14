@@ -489,6 +489,37 @@
           ]
         }
       ]
+    },
+    {
+      "name": "dodge in place from idle",
+      "id": "doDodgeInPlace",
+      "priority": 102,
+      "conditions": [
+        {
+          "conditionType": "controls",
+          "args": [
+            {
+              "argName": "control",
+              "value": "dodge"
+            }
+          ]
+        }
+      ],
+      "effects": [
+        {
+          "effectType": "setNextState",
+          "args": [
+            {
+              "argName": "destination",
+              "value": "dodgeInPlace"
+            },
+            {
+              "argName": "resolutionType",
+              "value": "interrupt"
+            }
+          ]
+        }
+      ]
     }
   ],
   "animations": [
@@ -533,6 +564,10 @@
           {
             "id": "jump",
             "priority": 55
+          },
+          {
+            "id": "doDodgeInPlace",
+            "priority": 102
           }
         ],
         "interactions": [],
@@ -1676,6 +1711,10 @@
           {
             "id": "defaultToIdle",
             "priority": 1
+          },
+          {
+            "id": "vulnerableToHit",
+            "priority": 2
           }
         ],
         "interactions": [],
@@ -1692,6 +1731,21 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "name": "dodge in place",
+      "id": "dodgeInPlace",
+      "numFrames": 6,
+      "state": {
+        "importedInteractions": [
+          {
+            "id": "defaultToIdle",
+            "priority": 1
+          }
+        ],
+        "interactions": [],
+        "collisions": []
       }
     }
   ]
